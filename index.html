@@ -20,6 +20,7 @@
             -webkit-user-select: none;
             touch-action: manipulation;
             font-family: system-ui, -apple-system, sans-serif;
+            overscroll-behavior-y: none;
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -28,6 +29,16 @@
         .pt-safe { padding-top: env(safe-area-inset-top); }
         
         .item-esgotado { filter: grayscale(100%) opacity(0.6); }
+
+        /* Animações */
+        .swipe-card-content { will-change: transform; transition: transform 0.05s linear; }
+        /* Removemos a transição de reset lenta para evitar bugs visuais na re-renderização */
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        
+        @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+        .animate-slide-in-left { animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     </style>
 </head>
 <body class="transition-colors duration-300 overflow-hidden fixed inset-0">
@@ -46,8 +57,6 @@
             Archive: `<img src="https://cdn-icons-png.flaticon.com/512/6871/6871864.png" width="28" height="28" alt="Armário" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));">`,
             Snowflake: `<img src="https://cdn-icons-png.flaticon.com/512/2333/2333360.png" width="28" height="28" alt="Geladeira" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));">`,
             Sparkles: `<img src="https://cdn-icons-png.flaticon.com/512/995/995053.png" width="28" height="28" alt="Limpeza" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));">`,
-
-            PackageOpen: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9"/><path d="m7 9.5-1.5 1.5a2 2 0 0 0 0 2.8l.2.2"/><path d="m17 9.5 1.5 1.5a2 2 0 0 1 0 2.8l-.2.2"/><path d="M2 12h20"/><path d="m22 16-4-4"/><path d="m2 16 4-4"/></svg>`,
             ShoppingBag: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`,
             ArrowLeft: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>`,
             ShoppingCart: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>`,
@@ -56,50 +65,49 @@
             SparklesSmall: `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 3-1.9 5.8a1 1 0 0 1-.6.6L3.7 11.3a1 1 0 0 0 0 1.9l5.8 1.9a1 1 0 0 1 .6.6l1.9 5.8a1 1 0 0 0 1.9 0l1.9-5.8a1 1 0 0 1 .6-.6l5.8-1.9a1 1 0 0 0 0-1.9l-5.8-1.9a1 1 0 0 1-.6-.6L13.9 3a1 1 0 0 0-1.9 0Z"/></svg>`,
             Clock: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
             Trash2: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`,
-            Menu: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>`
+            Menu: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>`,
+            Search: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`,
+            Plus: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>`,
+            PlusCircle: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>`,
+            Placeholder: `https://cdn-icons-png.flaticon.com/512/1554/1554579.png`
         };
 
         const SEED_DATA = [
-            // ARMÁRIO
             { id: '1', nome: 'Arroz Branco 5kg', img: 'https://prezunic.vtexassets.com/arquivos/ids/180742/65678a821ef3739680761582.jpg?v=638368812869870000', qtd: 4, minimo: 2, tipo: 'armario', dias_compra: 10, validade_dias: 365 },
             { id: '2', nome: 'Feijão Carioca 1kg', img: 'https://m.media-amazon.com/images/I/815s35jNVkL.jpg', qtd: 1, minimo: 3, tipo: 'armario', dias_compra: 5, validade_dias: 180 },
             { id: '3', nome: 'Óleo de Soja', img: 'https://carrefourbrfood.vtexassets.com/arquivos/ids/211616/141836_1.jpg?v=637272514200130000', qtd: 0, minimo: 2, tipo: 'armario', dias_compra: 0, validade_dias: 365 },
             { id: '9', nome: 'Café', img: 'https://prezunic.vtexassets.com/arquivos/ids/206666/65ccb90648694cc16be90067.jpg?v=638435123266500000', qtd: 2, minimo: 1, tipo: 'armario', dias_compra: 2, validade_dias: 365 },
             { id: '10', nome: 'Pão Francês', img: 'https://cdn.2rscms.com.br/imgcache/5054/uploads/5054/layout/Linha%20Gold%20Paes/pao-frances-12h.png.webp', qtd: 6, minimo: 2, tipo: 'armario', dias_compra: 0, validade_dias: 3 },
-
-            // GELADEIRA
             { id: '5', nome: 'Leite Integral', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Milk_glass.jpg/640px-Milk_glass.jpg', qtd: 2, minimo: 2, tipo: 'geladeira', dias_compra: 1, validade_dias: 5 },
             { id: '6', nome: 'Bananas', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Banana-Single.jpg/640px-Banana-Single.jpg', qtd: 6, minimo: 3, tipo: 'geladeira', dias_compra: 6, validade_dias: 5 },
             { id: '12', nome: 'Carne Moída', img: 'https://trela.com.br/_next/image?url=https%3A%2F%2Fprod-zapt-images.s3.sa-east-1.amazonaws.com%2Fproducts%2F7c8d3365-8167-494f-9d68-1217499bcfed.png&w=3840&q=75', qtd: 2, minimo: 1, tipo: 'geladeira', dias_compra: 1, validade_dias: 60 },
             { id: '13', nome: 'Linguiça Toscana', img: 'https://images.tcdn.com.br/img/img_prod/1321487/linguica_toscana_sadia_173_1_bfc327fda8f8702b33edf88a792d3200.png', qtd: 1, minimo: 1, tipo: 'geladeira', dias_compra: 2, validade_dias: 30 },
-
-            // LIMPEZA / BANHEIRO
             { id: '4', nome: 'Sabonete', img: 'https://drogal.vtexassets.com/arquivos/ids/163251/11964.jpg?v=638464430221900000', qtd: 5, minimo: 2, tipo: 'limpeza', dias_compra: 30, validade_dias: 700 },
             { id: '7', nome: 'Água Sanitária', img: 'https://m.media-amazon.com/images/I/61D+H+8-l+L._AC_SX679_.jpg', qtd: 1, minimo: 1, tipo: 'limpeza', dias_compra: 0, validade_dias: 365 },
             { id: '8', nome: 'Sabão em Pó', img: 'https://destro.fbitsstatic.net/img/p/sabao-em-po-tixan-ype-primavera-400g-80644/267199-1.jpg?w=500&h=500&v=202501231555&qs=ignore', qtd: 1, minimo: 1, tipo: 'limpeza', dias_compra: 0, validade_dias: 365 },
             { id: '14', nome: 'Shampoo', img: 'https://www.drogaraia.com.br/_next/image?url=https%3A%2F%2Fproduct-data.raiadrogasil.io%2Fimages%2F15925906.webp&w=3840&q=40', qtd: 1, minimo: 1, tipo: 'limpeza', dias_compra: 20, validade_dias: 365 },
             { id: '15', nome: 'Condicionador', img: 'https://m.media-amazon.com/images/I/51Y-e5B-5UL._AC_SX679_.jpg', qtd: 1, minimo: 1, tipo: 'limpeza', dias_compra: 20, validade_dias: 365 },
-            // CORREÇÃO: Agora é Sabão em Barra na aba Limpeza
             { id: '11', nome: 'Sabão em Barra', img: 'https://cdn.awsli.com.br/400x400/460/460481/produto/17135589167bcb6e7fd.jpg', qtd: 5, minimo: 2, tipo: 'limpeza', dias_compra: 0, validade_dias: 365 }
         ];
 
         let state = { 
             produtos: [], 
             abaAtual: 'armario', 
-            tela: 'estoque', 
+            tela: 'estoque',
             itemSelecionado: null,
-            menuAberto: false 
+            menuAberto: false,
+            buscando: false,
+            termoBusca: ''
         };
 
         function init() {
-            // Mudamos para V4 para forçar a correção do Sabão
-            const saved = localStorage.getItem('estoque_mae_data_v4'); 
+            const saved = localStorage.getItem('estoque_mae_data_v6'); 
             state.produtos = saved ? JSON.parse(saved) : SEED_DATA;
             render();
         }
 
         function save() {
-            localStorage.setItem('estoque_mae_data_v4', JSON.stringify(state.produtos));
+            localStorage.setItem('estoque_mae_data_v6', JSON.stringify(state.produtos));
             render();
         }
 
@@ -112,7 +120,7 @@
             if (!navigator.vibrate) return;
             if (tipo === 'sucesso') navigator.vibrate(50);
             if (tipo === 'erro') navigator.vibrate([50, 50, 50]);
-            if (tipo === 'click') navigator.vibrate(15);
+            if (tipo === 'click') navigator.vibrate(10);
         }
 
         function alterarQtd(id, delta) {
@@ -128,7 +136,20 @@
             produto.qtd = novaQtd;
             if (delta > 0 && produto.tipo === 'geladeira') produto.dias_compra = 0;
             
+            save(); // Render é chamado aqui
+        }
+
+        function adicionarProduto(novoProduto) {
+            state.produtos.push({
+                id: Date.now().toString(),
+                qtd: 1,
+                minimo: 1,
+                dias_compra: 0,
+                validade_dias: 30,
+                ...novoProduto
+            });
             save();
+            setState({ tela: 'estoque', abaAtual: novoProduto.tipo });
         }
 
         const getStatusQtd = (qtd, minimo) => {
@@ -153,28 +174,107 @@
             estragado: { bg: 'bg-slate-200', text: 'text-slate-600', label: 'VELHO', icon: ICONS.Trash2, ring: 'border-slate-300' }
         };
 
+        // --- SWIPE LOGIC (CORRIGIDA) ---
+        let touchStartX = 0;
+        let currentSwipeEl = null;
+        
+        // Unifica inicio do toque e mouse
+        function handleStart(clientX, currentTarget) {
+            if(state.tela !== 'estoque') return;
+            touchStartX = clientX;
+            currentSwipeEl = currentTarget.querySelector('.swipe-card-content');
+            // Remove transição para movimento instantâneo
+            if(currentSwipeEl) currentSwipeEl.style.transition = 'none';
+        }
+
+        function handleMove(clientX, currentTarget) {
+            if (!currentSwipeEl || state.tela !== 'estoque') return;
+            
+            const diffX = clientX - touchStartX;
+            const resist = diffX * 0.7; 
+            
+            if (Math.abs(diffX) > 5) {
+                currentSwipeEl.style.transform = `translateX(${resist}px)`;
+                
+                const card = currentSwipeEl.parentElement;
+                const bgLeft = card.querySelector('.swipe-action-left');
+                const bgRight = card.querySelector('.swipe-action-right');
+                
+                if (diffX > 0) { // Direita (Add)
+                    bgLeft.style.opacity = Math.min(diffX / 70, 1);
+                    bgRight.style.opacity = 0;
+                } else { // Esquerda (Remove)
+                    bgRight.style.opacity = Math.min(Math.abs(diffX) / 70, 1);
+                    bgLeft.style.opacity = 0;
+                }
+            }
+        }
+
+        function handleEnd(clientX, id) {
+            if (!currentSwipeEl) return;
+            
+            const diffX = clientX - touchStartX;
+            const threshold = 70; // Reduzido de 100 para 70 para facilitar
+            
+            // O truque aqui é atualizar o estado. O render vai resetar o DOM, 
+            // então não precisamos animar o card de volta manualmente.
+            
+            if (diffX > threshold) {
+                alterarQtd(id, 1); // Isso vai disparar o render()
+            } else if (diffX < -threshold) {
+                alterarQtd(id, -1); // Isso vai disparar o render()
+            } else {
+                // Se não atingiu o limite, anima de volta (reset suave)
+                currentSwipeEl.style.transition = 'transform 0.2s ease-out';
+                currentSwipeEl.style.transform = 'translateX(0)';
+                
+                const card = currentSwipeEl.parentElement;
+                card.querySelector('.swipe-action-left').style.opacity = 0;
+                card.querySelector('.swipe-action-right').style.opacity = 0;
+            }
+
+            currentSwipeEl = null;
+        }
+
+        // Wrappers para Touch
+        function handleTouchStart(e, id) { handleStart(e.touches[0].clientX, e.currentTarget); }
+        function handleTouchMove(e, id) { handleMove(e.touches[0].clientX, e.currentTarget); }
+        function handleTouchEnd(e, id) { handleEnd(e.changedTouches[0].clientX, id); }
+
+        // Wrappers para Mouse (Para teste no PC)
+        let isMouseDown = false;
+        function handleMouseDown(e, id) { isMouseDown = true; handleStart(e.clientX, e.currentTarget); }
+        function handleMouseMove(e, id) { if(!isMouseDown) return; handleMove(e.clientX, e.currentTarget); }
+        function handleMouseUp(e, id) { if(!isMouseDown) return; isMouseDown = false; handleEnd(e.clientX, id); }
+        function handleMouseLeave(e, id) { if(isMouseDown) { isMouseDown = false; handleEnd(e.clientX, id); } }
+
+
+        // --- RENDERIZAÇÃO ---
         function render() {
             const app = document.getElementById('app');
             
-            // Cor de Fundo Dinâmica
             let bgColor = 'bg-slate-50';
-            if (state.tela === 'entrada_rapida') bgColor = 'bg-emerald-50';
-            else if (state.tela === 'saida_rapida') bgColor = 'bg-orange-50';
+            if (state.tela === 'cadastro') bgColor = 'bg-white';
             
             document.body.className = `${bgColor} transition-colors duration-300`;
 
-            const produtosExibidos = state.produtos.filter(p => p.tipo === state.abaAtual);
+            let produtosFiltrados = state.produtos;
+            if (state.buscando && state.termoBusca.length > 0) {
+                produtosFiltrados = state.produtos.filter(p => p.nome.toLowerCase().includes(state.termoBusca.toLowerCase()));
+            } else {
+                produtosFiltrados = state.produtos.filter(p => p.tipo === state.abaAtual);
+            }
+
             const listaDeCompras = state.produtos.filter(p => getStatusQtd(p.qtd, p.minimo) !== 'seguro');
 
             app.innerHTML = `
-                ${renderCompactHeader(listaDeCompras.length)}
+                ${renderHeader(listaDeCompras.length)}
                 
                 <main class="flex-1 overflow-y-auto overflow-x-hidden pb-32 pt-safe no-scrollbar">
-                    <div class="p-4 pt-2">
-                        ${state.tela === 'estoque' ? renderListEstoque(produtosExibidos) : ''}
+                    <div class="p-4 pt-4">
+                        ${state.tela === 'estoque' ? renderListEstoque(produtosFiltrados) : ''}
                         ${state.tela === 'lista' ? renderLista(listaDeCompras) : ''}
-                        ${state.tela === 'entrada_rapida' ? renderGridEntrada() : ''}
-                        ${state.tela === 'saida_rapida' ? renderGridSaida() : ''}
+                        ${state.tela === 'cadastro' ? renderCadastro() : ''}
                     </div>
                 </main>
 
@@ -184,45 +284,53 @@
             `;
         }
 
-        function renderCompactHeader(qtdFalta) {
+        function renderHeader(qtdFalta) {
             if (state.tela === 'lista') {
                 return `
-                <div class="h-16 pt-safe bg-white shadow-sm sticky top-0 z-10 flex items-center justify-between px-4">
-                    <button onclick="vibrar('click'); setState({tela: 'estoque'})" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center active:scale-90 transition-transform text-slate-600">${ICONS.ArrowLeft}</button>
-                    <h1 class="text-lg font-black text-rose-600 uppercase tracking-wide">Lista de Compras</h1>
-                    <div class="w-10"></div>
+                <div class="h-16 pt-safe bg-white shadow-sm sticky top-0 z-50 flex items-center justify-between px-4">
+                    <div class="flex-1 flex justify-start"><button onclick="vibrar('click'); setState({tela: 'estoque'})" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center active:scale-90 transition-transform text-slate-600">${ICONS.ArrowLeft}</button></div>
+                    <h1 class="absolute left-1/2 -translate-x-1/2 text-lg font-black text-rose-600 uppercase tracking-wide whitespace-nowrap pointer-events-none">Lista de Compras</h1>
+                    <div class="flex-1"></div>
                 </div>`;
             }
 
-            // Header Principal
-            let title = "Armário";
-            let textColor = "text-orange-800";
-            
-            if (state.abaAtual === 'geladeira') { title = "Geladeira"; textColor = "text-cyan-800"; }
-            if (state.abaAtual === 'limpeza') { title = "Limpeza"; textColor = "text-violet-800"; }
+            if (state.tela === 'cadastro') {
+                return `
+                <div class="h-16 pt-safe bg-white shadow-sm sticky top-0 z-50 flex items-center justify-between px-4">
+                    <div class="flex-1 flex justify-start"><button onclick="vibrar('click'); setState({tela: 'estoque'})" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center active:scale-90 transition-transform text-slate-600">${ICONS.ArrowLeft}</button></div>
+                    <h1 class="absolute left-1/2 -translate-x-1/2 text-lg font-black text-slate-800 uppercase tracking-wide whitespace-nowrap pointer-events-none">Novo Produto</h1>
+                    <div class="flex-1"></div>
+                </div>`;
+            }
+
+            let title = state.abaAtual === 'geladeira' ? "Geladeira" : (state.abaAtual === 'limpeza' ? "Limpeza" : "Armário");
+            let textColor = state.abaAtual === 'geladeira' ? "text-cyan-800" : (state.abaAtual === 'limpeza' ? "text-violet-800" : "text-orange-800");
+
+            if (state.buscando) {
+                return `
+                <div class="h-16 pt-safe bg-white shadow-md sticky top-0 z-50 flex items-center justify-between px-4 gap-2 animate-fade-in">
+                    <div class="flex-1 h-10 bg-slate-100 rounded-xl flex items-center px-3 gap-2">
+                        <span class="text-slate-400">${ICONS.Search}</span>
+                        <input type="text" placeholder="Buscar..." class="bg-transparent w-full h-full outline-none text-slate-700 font-bold placeholder-slate-400" value="${state.termoBusca}" oninput="setState({termoBusca: this.value})" autofocus>
+                    </div>
+                    <button onclick="vibrar('click'); setState({buscando: false, termoBusca: ''})" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold active:scale-90 transition-transform">${ICONS.X}</button>
+                </div>`;
+            }
 
             const badge = qtdFalta > 0 ? `<span class="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-sm animate-pulse">${qtdFalta}</span>` : '';
             const cartColor = qtdFalta > 0 ? "text-rose-500" : "text-slate-400";
 
-            // Header diferente para modos de Entrada/Saída
-            if (state.tela === 'entrada_rapida') {
-                return `
-                <div class="h-16 pt-safe bg-emerald-100 shadow-sm sticky top-0 z-10 flex items-center justify-between px-4">
-                    <div class="flex items-center gap-3"><button onclick="setState({tela: 'estoque'})" class="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm active:scale-90 transition-transform">${ICONS.ArrowLeft}</button><span class="font-black text-emerald-800 uppercase tracking-wide">Guardar</span></div>
-                </div>`;
-            }
-            if (state.tela === 'saida_rapida') {
-                return `
-                <div class="h-16 pt-safe bg-orange-100 shadow-sm sticky top-0 z-10 flex items-center justify-between px-4">
-                    <div class="flex items-center gap-3"><button onclick="setState({tela: 'estoque'})" class="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm active:scale-90 transition-transform">${ICONS.ArrowLeft}</button><span class="font-black text-orange-800 uppercase tracking-wide">Usar</span></div>
-                </div>`;
-            }
-
+            // CORREÇÃO: Header com Título Absoluto e Fundo Sólido (z-50)
             return `
-            <div class="h-16 pt-safe bg-white/90 backdrop-blur sticky top-0 z-10 flex items-center justify-between px-4 shadow-sm transition-all">
-                <button onclick="vibrar('click'); setState({menuAberto: true})" class="w-10 h-10 flex items-center justify-center text-slate-600 active:scale-90 transition-transform">${ICONS.Menu}</button>
-                <h1 class="text-lg font-black ${textColor} uppercase tracking-wider">${title}</h1>
-                <button onclick="vibrar('click'); setState({tela: 'lista'})" class="w-10 h-10 flex items-center justify-center relative active:scale-90 transition-transform ${cartColor}">
+            <div class="h-16 pt-safe bg-white sticky top-0 z-50 flex items-center justify-between px-4 shadow-sm transition-all">
+                <div class="flex items-center gap-2 z-20">
+                    <button onclick="vibrar('click'); setState({menuAberto: true})" class="w-10 h-10 flex items-center justify-center text-slate-600 active:scale-90 transition-transform">${ICONS.Menu}</button>
+                    <button onclick="vibrar('click'); setState({buscando: true})" class="w-10 h-10 flex items-center justify-center text-slate-400 active:scale-90 transition-transform">${ICONS.Search}</button>
+                </div>
+                
+                <h1 class="absolute left-1/2 -translate-x-1/2 text-lg font-black ${textColor} uppercase tracking-wider whitespace-nowrap pointer-events-none z-10">${title}</h1>
+                
+                <button onclick="vibrar('click'); setState({tela: 'lista'})" class="w-10 h-10 flex items-center justify-center relative active:scale-90 transition-transform ${cartColor} z-20">
                     ${ICONS.ShoppingCart}
                     ${badge}
                 </button>
@@ -231,25 +339,29 @@
 
         function renderHamburgerMenu() {
             return `
-            <div class="fixed inset-0 z-50 flex animate-fade-in">
+            <div class="fixed inset-0 z-[60] flex animate-fade-in">
                 <div onclick="setState({menuAberto: false})" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
                 <div class="relative w-3/4 max-w-xs bg-white h-full shadow-2xl animate-slide-in-left flex flex-col pt-safe">
-                    <div class="p-6 border-b border-slate-100">
+                    <div class="p-6 border-b border-slate-100 bg-orange-50">
                         <h2 class="text-2xl font-black text-slate-800">Olá, Mãe!</h2>
-                        <p class="text-slate-400 text-sm font-medium mt-1">Controle da Casa</p>
+                        <p class="text-slate-500 text-sm font-medium mt-1">Controle da Casa</p>
                     </div>
-                    <nav class="flex-1 p-4 space-y-2">
-                        <button onclick="setState({menuAberto: false, tela: 'estoque'})" class="w-full p-4 rounded-xl bg-slate-50 text-slate-700 font-bold text-left flex items-center gap-3">${ICONS.Archive} Início</button>
+                    <nav class="flex-1 p-4 space-y-3">
+                        <button onclick="setState({menuAberto: false, tela: 'estoque'})" class="w-full p-4 rounded-2xl bg-slate-50 text-slate-700 font-bold text-left flex items-center gap-4 active:bg-slate-100">${ICONS.Archive} Início</button>
+                        <button onclick="setState({menuAberto: false, tela: 'cadastro'})" class="w-full p-4 rounded-2xl bg-emerald-50 text-emerald-800 font-bold text-left flex items-center gap-4 active:bg-emerald-100 border border-emerald-100"><span class="text-emerald-600">${ICONS.PlusCircle}</span> Novo Produto</button>
                     </nav>
-                    <div class="p-4"><button onclick="setState({menuAberto: false})" class="w-full py-3 bg-slate-100 text-slate-500 rounded-xl font-bold">Voltar</button></div>
+                    <div class="p-4 text-center text-xs text-slate-300 font-medium">Versão 6.0 - Fixed</div>
                 </div>
             </div>`;
         }
 
         function renderListEstoque(produtos) {
-            if (produtos.length === 0) return `<div class="text-center p-10 opacity-50 font-bold text-slate-400">Nada aqui ainda.</div>`;
-            const CARD_STYLE = "bg-white rounded-[2rem] p-4 shadow-[0_4px_0_0_rgba(0,0,0,0.05)] border-2 border-transparent active:scale-[0.98] transition-transform relative overflow-hidden";
+            if (produtos.length === 0) {
+                if (state.buscando) return `<div class="text-center p-10 text-slate-400 font-bold">Nenhum produto encontrado para "${state.termoBusca}".</div>`;
+                return `<div class="text-center p-10 opacity-50 font-bold text-slate-400">Nada aqui ainda.</div>`;
+            }
 
+            // Correção: Adicionados eventos de Mouse para funcionar em preview de PC
             return `<div class="flex flex-col gap-4 pb-24">` + produtos.map(p => {
                 const statusQtd = getStatusQtd(p.qtd, p.minimo);
                 let frescorHTML = '';
@@ -274,14 +386,34 @@
                 }
 
                 return `
-                <div onclick="vibrar('click'); openModal('${p.id}')" class="${CARD_STYLE}">
-                    <div class="flex items-start gap-4 ${containerClass}">
-                        <div class="w-24 h-24 shrink-0 rounded-2xl bg-slate-50 overflow-hidden border-4 ${ringClass}"><img src="${p.img}" class="w-full h-full object-cover ${imgFilter}"></div>
-                        <div class="flex-1 min-w-0 flex flex-col gap-2">
-                            <div class="flex justify-between items-start"><h3 class="text-lg font-bold text-slate-700 leading-tight line-clamp-2">${p.nome} ${frescorHTML}</h3></div>
-                            <div class="flex items-end justify-between">
-                                <div class="flex flex-wrap gap-1 pr-2 flex-1">${visualQtd}</div>
-                                <div class="shrink-0 text-5xl font-black ${p.qtd === 0 ? 'text-rose-200' : 'text-slate-200'} tabular-nums tracking-tighter leading-none self-end">${p.qtd}</div>
+                <div class="relative h-auto rounded-[2rem] select-none touch-pan-y overflow-hidden shadow-[0_4px_0_0_rgba(0,0,0,0.05)] z-0"
+                     ontouchstart="handleTouchStart(event, '${p.id}')"
+                     ontouchmove="handleTouchMove(event, '${p.id}')"
+                     ontouchend="handleTouchEnd(event, '${p.id}')"
+                     onmousedown="handleMouseDown(event, '${p.id}')"
+                     onmousemove="handleMouseMove(event, '${p.id}')"
+                     onmouseup="handleMouseUp(event, '${p.id}')"
+                     onmouseleave="handleMouseLeave(event, '${p.id}')"
+                     >
+                    
+                    <div class="swipe-action-left absolute inset-y-0 left-0 w-full bg-emerald-500 flex items-center justify-start pl-8 opacity-0 transition-opacity duration-100 pointer-events-none">
+                        <span class="text-white font-black text-lg tracking-widest uppercase flex items-center gap-2">${ICONS.Plus} COMPREI</span>
+                    </div>
+                    
+                    <div class="swipe-action-right absolute inset-y-0 right-0 w-full bg-orange-500 flex items-center justify-end pr-8 opacity-0 transition-opacity duration-100 pointer-events-none">
+                        <span class="text-white font-black text-lg tracking-widest uppercase flex items-center gap-2">USEI <span class="rotate-45">${ICONS.Plus}</span></span>
+                    </div>
+
+                    <div class="swipe-card-content bg-white p-4 border-2 border-transparent relative z-10 h-full cursor-grab active:cursor-grabbing" onclick="vibrar('click'); openModal('${p.id}')">
+                        <div class="flex items-start gap-4 ${containerClass} pointer-events-none"> <div class="w-24 h-24 shrink-0 rounded-2xl bg-slate-50 overflow-hidden border-4 ${ringClass} shadow-inner">
+                                <img src="${p.img}" class="w-full h-full object-cover ${imgFilter}" onerror="this.src='${ICONS.Placeholder}'">
+                            </div>
+                            <div class="flex-1 min-w-0 flex flex-col gap-2">
+                                <div class="flex justify-between items-start"><h3 class="text-lg font-bold text-slate-700 leading-tight line-clamp-2">${p.nome} ${frescorHTML}</h3></div>
+                                <div class="flex items-end justify-between mt-auto">
+                                    <div class="flex flex-wrap gap-1 pr-2 flex-1">${visualQtd}</div>
+                                    <div class="shrink-0 text-5xl font-black ${p.qtd === 0 ? 'text-rose-200' : 'text-slate-200'} tabular-nums tracking-tighter leading-none self-end">${p.qtd}</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -289,103 +421,91 @@
             }).join('') + `</div>`;
         }
 
+        function renderCadastro() {
+            return `
+            <div class="p-4 flex flex-col gap-6 animate-fade-in">
+                <div class="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
+                    <label class="block text-slate-400 text-xs font-bold uppercase tracking-wide mb-2">Nome do Produto</label>
+                    <input id="novoNome" type="text" class="w-full bg-white rounded-xl px-4 py-3 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-400 shadow-sm" placeholder="Ex: Café Solúvel">
+                </div>
+                <div class="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
+                    <label class="block text-slate-400 text-xs font-bold uppercase tracking-wide mb-3">Onde Fica?</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <label class="cursor-pointer"><input type="radio" name="novoTipo" value="armario" checked class="peer hidden"><div class="bg-white p-3 rounded-xl flex flex-col items-center gap-2 border-2 border-transparent peer-checked:border-orange-400 peer-checked:bg-orange-50 text-slate-400 peer-checked:text-orange-600 transition-all shadow-sm">${ICONS.Archive} <span class="text-[10px] font-bold uppercase">Armário</span></div></label>
+                        <label class="cursor-pointer"><input type="radio" name="novoTipo" value="geladeira" class="peer hidden"><div class="bg-white p-3 rounded-xl flex flex-col items-center gap-2 border-2 border-transparent peer-checked:border-cyan-400 peer-checked:bg-cyan-50 text-slate-400 peer-checked:text-cyan-600 transition-all shadow-sm">${ICONS.Snowflake} <span class="text-[10px] font-bold uppercase">Geladeira</span></div></label>
+                        <label class="cursor-pointer"><input type="radio" name="novoTipo" value="limpeza" class="peer hidden"><div class="bg-white p-3 rounded-xl flex flex-col items-center gap-2 border-2 border-transparent peer-checked:border-violet-400 peer-checked:bg-violet-50 text-slate-400 peer-checked:text-violet-600 transition-all shadow-sm">${ICONS.Sparkles} <span class="text-[10px] font-bold uppercase">Limpeza</span></div></label>
+                    </div>
+                </div>
+                <div class="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
+                    <label class="block text-slate-400 text-xs font-bold uppercase tracking-wide mb-2">Imagem (URL)</label>
+                    <input id="novoImg" type="text" class="w-full bg-white rounded-xl px-4 py-3 text-sm text-slate-600 outline-none focus:ring-2 focus:ring-emerald-400 shadow-sm font-mono" placeholder="Cole o link da imagem">
+                    <p class="text-[10px] text-slate-400 mt-2 ml-1">Opcional.</p>
+                </div>
+                <button onclick="salvarNovoProduto()" class="w-full py-5 bg-slate-800 text-white rounded-[2rem] font-black text-lg shadow-lg active:scale-95 transition-transform mt-4 flex items-center justify-center gap-2">${ICONS.Check} SALVAR</button>
+            </div>`;
+        }
+
+        function salvarNovoProduto() {
+            const nome = document.getElementById('novoNome').value.trim();
+            const tipo = document.querySelector('input[name="novoTipo"]:checked').value;
+            let img = document.getElementById('novoImg').value.trim();
+            if (!nome) { vibrar('erro'); return alert('Digite o nome do produto!'); }
+            if (!img) img = ICONS.Placeholder;
+            adicionarProduto({ nome, tipo, img });
+            vibrar('sucesso');
+        }
+
         function renderBottomNav() {
-            // Classes de Ativo/Inativo
+            if (state.buscando) return '';
             const activeBase = "bg-white shadow-[0_4px_12px_rgba(0,0,0,0.1)] scale-105 ring-2 ring-slate-100 -translate-y-2";
             const inactiveClass = "text-slate-400 hover:bg-white/50 opacity-70 scale-90";
-
-            // Cores específicas por aba
             const activeArmario = `${activeBase} text-orange-600`;
             const activeGeladeira = `${activeBase} text-cyan-600`;
             const activeLimpeza = `${activeBase} text-violet-600`;
-
-            // Definir cor da barra baseada na aba atual (sutil)
             let navBg = "bg-slate-100/90 border-slate-200/50";
             if (state.abaAtual === 'armario') navBg = "bg-orange-50/90 border-orange-100/50";
             if (state.abaAtual === 'geladeira') navBg = "bg-cyan-50/90 border-cyan-100/50";
             if (state.abaAtual === 'limpeza') navBg = "bg-violet-50/90 border-violet-100/50";
-
             return `
-            <div class="fixed bottom-0 left-0 right-0 ${navBg} backdrop-blur border-t pb-safe pt-2 px-4 z-20 rounded-t-[2rem] transition-all duration-300">
+            <div class="fixed bottom-0 left-0 right-0 ${navBg} backdrop-blur border-t pb-safe pt-2 px-4 z-[60] rounded-t-[2rem] transition-all duration-300">
                 <div class="flex h-20 items-center justify-between gap-2 pb-2">
-                    
-                    <button onclick="vibrar('click'); setState({abaAtual: 'armario'})" class="flex-1 h-16 rounded-[1.5rem] flex flex-col items-center justify-center gap-1 transition-all duration-300 ${state.abaAtual === 'armario' ? activeArmario : inactiveClass}">
-                        ${ICONS.Archive}
-                        <span class="text-[9px] font-black uppercase tracking-wide">Armário</span>
-                    </button>
-
-                    <button onclick="vibrar('click'); setState({abaAtual: 'geladeira'})" class="flex-1 h-16 rounded-[1.5rem] flex flex-col items-center justify-center gap-1 transition-all duration-300 ${state.abaAtual === 'geladeira' ? activeGeladeira : inactiveClass}">
-                        ${ICONS.Snowflake}
-                        <span class="text-[9px] font-black uppercase tracking-wide">Geladeira</span>
-                    </button>
-
-                    <button onclick="vibrar('click'); setState({abaAtual: 'limpeza'})" class="flex-1 h-16 rounded-[1.5rem] flex flex-col items-center justify-center gap-1 transition-all duration-300 ${state.abaAtual === 'limpeza' ? activeLimpeza : inactiveClass}">
-                        ${ICONS.Sparkles}
-                        <span class="text-[9px] font-black uppercase tracking-wide">Limpeza</span>
-                    </button>
-
+                    <button onclick="vibrar('click'); setState({abaAtual: 'armario'})" class="flex-1 h-16 rounded-[1.5rem] flex flex-col items-center justify-center gap-1 transition-all duration-300 ${state.abaAtual === 'armario' ? activeArmario : inactiveClass}">${ICONS.Archive}<span class="text-[9px] font-black uppercase tracking-wide">Armário</span></button>
+                    <button onclick="vibrar('click'); setState({abaAtual: 'geladeira'})" class="flex-1 h-16 rounded-[1.5rem] flex flex-col items-center justify-center gap-1 transition-all duration-300 ${state.abaAtual === 'geladeira' ? activeGeladeira : inactiveClass}">${ICONS.Snowflake}<span class="text-[9px] font-black uppercase tracking-wide">Geladeira</span></button>
+                    <button onclick="vibrar('click'); setState({abaAtual: 'limpeza'})" class="flex-1 h-16 rounded-[1.5rem] flex flex-col items-center justify-center gap-1 transition-all duration-300 ${state.abaAtual === 'limpeza' ? activeLimpeza : inactiveClass}">${ICONS.Sparkles}<span class="text-[9px] font-black uppercase tracking-wide">Limpeza</span></button>
                 </div>
             </div>`;
-        }
-
-        // Funções auxiliares mantidas (Modal, Grids, Lista, etc.)
-        function renderGridEntrada() {
-            const ACTION_CARD_STYLE = "bg-white rounded-[2rem] p-3 shadow-[0_6px_0px_0px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[6px] transition-all border-2 border-transparent relative";
-            return `<div class="grid grid-cols-2 gap-4 pb-20 animate-fade-in">` + state.produtos.map(p => `
-                <div onclick="alterarQtd('${p.id}', 1)" class="${ACTION_CARD_STYLE} border-b-4 border-emerald-100 active:border-b-0">
-                    <div class="relative w-full aspect-square rounded-[1.5rem] overflow-hidden mb-2 bg-slate-50"><img src="${p.img}" class="w-full h-full object-cover opacity-90"><div class="absolute inset-0 flex items-center justify-center bg-emerald-500/20"><span class="text-4xl font-black text-white drop-shadow-md">+1</span></div></div>
-                    <p class="font-bold text-emerald-800 text-center leading-tight text-sm">${p.nome}</p>
-                    <div class="text-xs text-center text-emerald-600 font-bold mt-1">Tem ${p.qtd}</div>
-                </div>
-            `).join('') + `<div class="col-span-2 mt-4"><button onclick="vibrar('click'); setState({tela: 'estoque'})" class="w-full bg-slate-800 text-white py-6 rounded-[2rem] font-black text-xl shadow-[0_6px_0_0_rgba(0,0,0,0.3)] active:shadow-none active:translate-y-[6px] transition-all flex items-center justify-center gap-3"><span class="text-emerald-400">${ICONS.Check}</span> Terminei</button></div></div>`;
-        }
-
-        function renderGridSaida() {
-            const items = state.produtos.filter(p => p.qtd > 0);
-            if (items.length === 0) return `<div class="text-center p-10 text-slate-400 font-bold">Tudo vazio!<br>Nada para usar.</div>`;
-            const ACTION_CARD_STYLE = "bg-white rounded-[2rem] p-3 shadow-[0_6px_0px_0px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[6px] transition-all border-2 border-transparent relative";
-            return `<div class="grid grid-cols-2 gap-4 pb-20 animate-fade-in">` + items.map(p => `
-                <div onclick="alterarQtd('${p.id}', -1)" class="${ACTION_CARD_STYLE} border-b-4 border-orange-100 active:border-b-0">
-                    <div class="relative w-full aspect-square rounded-[1.5rem] overflow-hidden mb-2 bg-slate-50"><img src="${p.img}" class="w-full h-full object-cover opacity-90"><div class="absolute inset-0 flex items-center justify-center bg-orange-500/20"><span class="text-4xl font-black text-white drop-shadow-md">-1</span></div></div>
-                    <p class="font-bold text-orange-800 text-center leading-tight text-sm">${p.nome}</p>
-                    <div class="text-xs text-center text-orange-600 font-bold mt-1">Restam ${p.qtd}</div>
-                </div>
-            `).join('') + `<div class="col-span-2 mt-4"><button onclick="vibrar('click'); setState({tela: 'estoque'})" class="w-full bg-slate-800 text-white py-6 rounded-[2rem] font-black text-xl shadow-[0_6px_0_0_rgba(0,0,0,0.3)] active:shadow-none active:translate-y-[6px] transition-all flex items-center justify-center gap-3"><span class="text-orange-400">${ICONS.Check}</span> Pronto</button></div></div>`;
         }
 
         function renderLista(lista) {
             if (lista.length === 0) return `<div class="text-center p-10 text-slate-400 font-bold flex flex-col items-center"><div class="text-emerald-400 mb-2">${ICONS.Check}</div>Tudo comprado!</div>`;
             return `<div class="flex flex-col gap-3 pb-24 animate-fade-in">` + lista.map(p => `
                 <div class="bg-white p-4 rounded-[2rem] shadow-sm border-l-8 border-rose-500 flex items-center gap-4">
-                    <img src="${p.img}" class="w-16 h-16 rounded-xl bg-slate-100 object-cover">
+                    <img src="${p.img}" class="w-16 h-16 rounded-xl bg-slate-100 object-cover" onerror="this.src='${ICONS.Placeholder}'">
                     <div class="flex-1"><h3 class="font-bold text-lg text-slate-800">${p.nome}</h3><p class="text-rose-500 text-xs font-bold uppercase">Falta Comprar</p></div>
                     <button onclick="alterarQtd('${p.id}', 3)" class="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center active:scale-90 transition-transform shadow-sm">${ICONS.Check}</button>
-                </div>
-            `).join('') + `</div>`;
+                </div>`).join('') + `</div>`;
         }
 
         function renderModal() {
             const p = state.produtos.find(item => item.id === state.itemSelecionado.id);
             if (!p) return '';
             return `
-            <div class="fixed inset-0 z-50 flex flex-col justify-end animate-fade-in">
+            <div class="fixed inset-0 z-[70] flex flex-col justify-end animate-fade-in">
                 <div onclick="setState({itemSelecionado: null})" class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"></div>
-                <div class="bg-white w-full rounded-t-[2.5rem] shadow-2xl z-10 overflow-hidden max-h-[85vh] flex flex-col pb-safe">
+                <div class="bg-white w-full rounded-t-[2.5rem] shadow-2xl z-10 overflow-hidden max-h-[85vh] flex flex-col pb-safe animate-slide-up">
                     <div class="w-full flex justify-center pt-4 pb-2"><div class="w-16 h-1.5 bg-slate-200 rounded-full"></div></div>
                     <div class="p-6 pt-2">
                         <div class="flex flex-col items-center mb-8 text-center">
-                            <div class="w-48 h-48 rounded-[2rem] bg-slate-50 mb-4 overflow-hidden shadow-inner border-4 border-slate-100"><img src="${p.img}" class="w-full h-full object-cover"></div>
+                            <div class="w-48 h-48 rounded-[2rem] bg-slate-50 mb-4 overflow-hidden shadow-inner border-4 border-slate-100"><img src="${p.img}" class="w-full h-full object-cover" onerror="this.src='${ICONS.Placeholder}'"></div>
                             <h2 class="text-3xl font-black text-slate-800 leading-tight mb-1">${p.nome}</h2>
                             <div class="text-slate-400 font-bold text-lg uppercase tracking-wide">Você tem <strong class="text-4xl text-slate-800 ml-1">${p.qtd}</strong></div>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <button onclick="alterarQtd('${p.id}', -1)" ${p.qtd===0?'disabled':''} class="h-36 flex flex-col items-center justify-center gap-3 bg-orange-50 border-2 border-orange-100 rounded-[2rem] active:scale-95 transition-all disabled:opacity-50 disabled:grayscale">
-                                <div class="w-14 h-14 bg-white rounded-full text-orange-500 flex items-center justify-center shadow-sm text-2xl font-bold">-</div>
-                                <span class="font-black text-orange-800">ABRI 1</span>
+                                <div class="w-14 h-14 bg-white rounded-full text-orange-500 flex items-center justify-center shadow-sm text-2xl font-bold">-</div><span class="font-black text-orange-800">ABRI 1</span>
                             </button>
                             <button onclick="alterarQtd('${p.id}', 1)" class="h-36 flex flex-col items-center justify-center gap-3 bg-emerald-50 border-2 border-emerald-100 rounded-[2rem] active:scale-95 transition-all">
-                                <div class="w-14 h-14 bg-white rounded-full text-emerald-500 flex items-center justify-center shadow-sm text-2xl font-bold">+</div>
-                                <span class="font-black text-emerald-800">COMPREI</span>
+                                <div class="w-14 h-14 bg-white rounded-full text-emerald-500 flex items-center justify-center shadow-sm text-2xl font-bold">+</div><span class="font-black text-emerald-800">COMPREI</span>
                             </button>
                         </div>
                         <button onclick="setState({itemSelecionado: null})" class="w-full mt-6 py-5 bg-slate-100 text-slate-400 font-bold rounded-[1.5rem] tracking-wide">FECHAR</button>
@@ -395,6 +515,8 @@
         }
 
         function openModal(id) {
+            // Se estiver arrastando, não abre o modal
+            if(currentSwipeEl && currentSwipeEl.style.transform !== 'translateX(0px)' && currentSwipeEl.style.transform !== '') return;
             const item = state.produtos.find(p => p.id === id);
             setState({ itemSelecionado: item });
         }
