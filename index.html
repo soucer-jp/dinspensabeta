@@ -6,7 +6,7 @@
     <title>Estoque da Mãe</title>
     
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#fff7ed">
+    <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon.png">
@@ -23,16 +23,19 @@
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+        .animate-slide-in-left { animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         
-        /* Animações removidas da interação principal para evitar "piscadas" */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+        
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
         .pt-safe { padding-top: env(safe-area-inset-top); }
         
-        /* Filtro para itens esgotados */
         .item-esgotado { filter: grayscale(100%) opacity(0.6); }
     </style>
 </head>
-<body class="transition-colors duration-300 overflow-hidden fixed inset-0">
+<body class="bg-slate-50 transition-colors duration-300 overflow-hidden fixed inset-0">
 
     <div id="app" class="h-full w-full flex flex-col"></div>
 
@@ -47,6 +50,10 @@
         const ICONS = {
             Archive: `<img src="https://cdn-icons-png.flaticon.com/512/6871/6871864.png" width="28" height="28" alt="Armário" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));">`,
             Snowflake: `<img src="https://cdn-icons-png.flaticon.com/512/2333/2333360.png" width="28" height="28" alt="Geladeira" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));">`,
+            
+            Menu: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>`,
+            
+            // Mantidos os outros
             PackageOpen: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9"/><path d="m7 9.5-1.5 1.5a2 2 0 0 0 0 2.8l.2.2"/><path d="m17 9.5 1.5 1.5a2 2 0 0 1 0 2.8l-.2.2"/><path d="M2 12h20"/><path d="m22 16-4-4"/><path d="m2 16 4-4"/></svg>`,
             ShoppingBag: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`,
             ArrowLeft: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>`,
@@ -67,7 +74,13 @@
             { id: '6', nome: 'Bananas', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Banana-Single.jpg/640px-Banana-Single.jpg', qtd: 6, minimo: 3, tipo: 'geladeira', dias_compra: 6, validade_dias: 5 }
         ];
 
-        let state = { produtos: [], abaAtual: 'armario', tela: 'estoque', itemSelecionado: null };
+        let state = { 
+            produtos: [], 
+            abaAtual: 'armario', 
+            tela: 'estoque', 
+            itemSelecionado: null,
+            menuAberto: false // Novo estado para o menu hambúrguer
+        };
 
         function init() {
             const saved = localStorage.getItem('estoque_mae_data');
@@ -95,18 +108,12 @@
         function alterarQtd(id, delta) {
             const index = state.produtos.findIndex(p => p.id === id);
             if (index === -1) return;
-            
             const produto = state.produtos[index];
             const novaQtd = Math.max(0, produto.qtd + delta);
-            
             if (produto.qtd === 0 && delta < 0) { vibrar('erro'); return; }
             vibrar('sucesso');
-            
             produto.qtd = novaQtd;
             if (delta > 0 && produto.tipo === 'geladeira') produto.dias_compra = 0;
-            
-            // NOTA: Não fechamos o modal nem mostramos aviso de desfazer.
-            // A atualização é direta e mantemos o estado atual da tela.
             save();
         }
 
@@ -134,83 +141,104 @@
 
         function render() {
             const app = document.getElementById('app');
-            let bgColor = 'bg-orange-50';
-            
-            if (state.tela === 'entrada_rapida') bgColor = 'bg-emerald-100';
-            else if (state.tela === 'saida_rapida') bgColor = 'bg-orange-100';
-            else if (state.abaAtual === 'geladeira') bgColor = 'bg-cyan-50'; 
-            else bgColor = 'bg-orange-50'; 
-            
+            // Fundo agora é sempre limpo/branco para dar destaque aos cartões
+            let bgColor = 'bg-slate-50';
             document.body.className = `${bgColor} transition-colors duration-300`;
 
             const produtosExibidos = state.produtos.filter(p => p.tipo === state.abaAtual);
             const listaDeCompras = state.produtos.filter(p => getStatusQtd(p.qtd, p.minimo) !== 'seguro');
 
             app.innerHTML = `
-                ${renderHeader(listaDeCompras.length)}
+                ${renderCompactHeader(listaDeCompras.length)}
+                
                 <main class="flex-1 overflow-y-auto overflow-x-hidden pb-32 pt-safe no-scrollbar">
                     <div class="p-4 pt-2">
                         ${state.tela === 'estoque' ? renderListEstoque(produtosExibidos) : ''}
                         ${state.tela === 'lista' ? renderLista(listaDeCompras) : ''}
-                        ${state.tela === 'entrada_rapida' ? renderGridEntrada() : ''}
-                        ${state.tela === 'saida_rapida' ? renderGridSaida() : ''}
                     </div>
                 </main>
-                ${(state.tela === 'estoque' || state.tela === 'lista') ? renderBottomNav() : ''}
+
+                ${state.tela === 'estoque' ? renderBottomNav() : ''}
                 ${state.itemSelecionado ? renderModal() : ''}
+                ${state.menuAberto ? renderHamburgerMenu() : ''}
             `;
         }
 
-        function renderHeader(qtdFalta) {
-            if (state.tela !== 'estoque' && state.tela !== 'lista') {
-                const config = state.tela === 'entrada_rapida' 
-                    ? { bg: 'bg-emerald-200', text: 'text-emerald-800', title: 'Guardar', sub: 'Toque no que chegou' }
-                    : { bg: 'bg-orange-200', text: 'text-orange-800', title: 'Vou Usar', sub: 'Toque no que pegou' };
-                return `
-                <div class="pt-safe ${config.bg} sticky top-0 z-10 shadow-sm">
-                    <div class="px-4 py-4 flex justify-between items-center">
-                        <div class="flex items-center gap-3">
-                            <button onclick="vibrar('click'); setState({tela: 'estoque'})" class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-[0_4px_0_0_rgba(0,0,0,0.1)] active:shadow-none active:translate-y-1 transition-all">${ICONS.ArrowLeft}</button>
-                            <div><h1 class="text-2xl font-black ${config.text} leading-none">${config.title}</h1><p class="text-sm opacity-70 font-bold">${config.sub}</p></div>
-                        </div>
-                    </div>
-                </div>`;
-            }
+        // NOVO: Header Compacto (Tipo App Moderno)
+        function renderCompactHeader(qtdFalta) {
+            // Se estiver na lista de compras, mostra botão voltar
             if (state.tela === 'lista') {
                 return `
-                <div class="pt-safe bg-white sticky top-0 z-10 shadow-sm">
-                    <div class="px-4 py-4 flex justify-between items-center">
-                        <div class="flex items-center gap-3">
-                            <button onclick="vibrar('click'); setState({tela: 'estoque'})" class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center shadow-sm active:scale-90 transition-transform">${ICONS.ArrowLeft}</button>
-                            <h1 class="text-2xl font-black text-rose-600 uppercase">Lista de Compras</h1>
-                        </div>
-                    </div>
+                <div class="h-16 pt-safe bg-white shadow-sm sticky top-0 z-10 flex items-center justify-between px-4">
+                    <button onclick="vibrar('click'); setState({tela: 'estoque'})" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center active:scale-90 transition-transform text-slate-600">
+                        ${ICONS.ArrowLeft}
+                    </button>
+                    <h1 class="text-lg font-black text-rose-600 uppercase tracking-wide">Lista de Compras</h1>
+                    <div class="w-10"></div> <!-- Espaço para equilibrar -->
                 </div>`;
             }
+
+            // Header Principal: Menu | Título | Carrinho
+            const badge = qtdFalta > 0 
+                ? `<span class="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-sm animate-pulse">${qtdFalta}</span>` 
+                : '';
             
-            const titulo = state.abaAtual === 'armario' ? 'Armário' : 'Geladeira';
-            const textClass = state.abaAtual === 'armario' ? 'text-orange-900' : 'text-cyan-900';
-            
-            let btnCartClass = qtdFalta > 0 ? "bg-rose-500 text-white animate-pulse shadow-lg shadow-rose-200" : "bg-white text-slate-400 shadow-sm";
-            let btnContent = qtdFalta > 0 
-                ? `<span class="bg-white text-rose-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-black">${qtdFalta}</span> Faltando` 
-                : `<span class="text-xs font-bold flex items-center gap-1">${ICONS.Check} <span class="hidden sm:inline">Tudo ok</span></span>`;
+            const cartColor = qtdFalta > 0 ? "text-rose-500" : "text-slate-400";
 
             return `
-            <div class="pt-safe bg-white/90 backdrop-blur sticky top-0 z-10 shadow-sm transition-all">
-                <div class="px-5 py-4 flex justify-between items-end">
-                    <div><p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Estou olhando o</p><h1 class="text-4xl font-black ${textClass} tracking-tight">${titulo}</h1></div>
-                    <button onclick="vibrar('click'); setState({tela: 'lista'})" class="${btnCartClass} px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2 transition-all active:scale-95">${btnContent}</button>
+            <div class="h-16 pt-safe bg-white/90 backdrop-blur sticky top-0 z-10 flex items-center justify-between px-4 shadow-sm transition-all">
+                <!-- Botão Menu Hambúrguer -->
+                <button onclick="vibrar('click'); setState({menuAberto: true})" class="w-10 h-10 flex items-center justify-center text-slate-600 active:scale-90 transition-transform">
+                    ${ICONS.Menu}
+                </button>
+
+                <!-- Título Central -->
+                <h1 class="text-lg font-black text-slate-800 uppercase tracking-wider">Estoque</h1>
+
+                <!-- Botão Carrinho -->
+                <button onclick="vibrar('click'); setState({tela: 'lista'})" class="w-10 h-10 flex items-center justify-center relative active:scale-90 transition-transform ${cartColor}">
+                    ${ICONS.ShoppingCart}
+                    ${badge}
+                </button>
+            </div>`;
+        }
+
+        // NOVO: Menu Lateral (Gaveta)
+        function renderHamburgerMenu() {
+            return `
+            <div class="fixed inset-0 z-50 flex animate-fade-in">
+                <!-- Backdrop Escuro -->
+                <div onclick="setState({menuAberto: false})" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+                
+                <!-- Gaveta Branca -->
+                <div class="relative w-3/4 max-w-xs bg-white h-full shadow-2xl animate-slide-in-left flex flex-col pt-safe">
+                    <div class="p-6 border-b border-slate-100">
+                        <h2 class="text-2xl font-black text-slate-800">Olá, Mãe!</h2>
+                        <p class="text-slate-400 text-sm font-medium mt-1">Controle da Casa v1.0</p>
+                    </div>
+                    
+                    <nav class="flex-1 p-4 space-y-2">
+                        <button onclick="setState({menuAberto: false, tela: 'estoque'})" class="w-full p-4 rounded-xl bg-emerald-50 text-emerald-700 font-bold text-left flex items-center gap-3">
+                            ${ICONS.Archive} Início
+                        </button>
+                        <!-- Espaço para futuras opções -->
+                        <button class="w-full p-4 rounded-xl text-slate-400 font-bold text-left flex items-center gap-3 opacity-50">
+                            Configurações (Em breve)
+                        </button>
+                    </nav>
+
+                    <div class="p-4">
+                        <button onclick="setState({menuAberto: false})" class="w-full py-3 bg-slate-100 text-slate-500 rounded-xl font-bold">Voltar</button>
+                    </div>
                 </div>
             </div>`;
         }
 
         function renderListEstoque(produtos) {
             if (produtos.length === 0) return `<div class="text-center p-10 opacity-50 font-bold text-slate-400">Nada aqui ainda.</div>`;
-            
-            const CARD_STYLE = "bg-white rounded-[2rem] p-4 shadow-[0_6px_0_0_rgba(0,0,0,0.05)] border-2 border-transparent active:scale-[0.98] transition-transform relative overflow-hidden";
+            const CARD_STYLE = "bg-white rounded-[2rem] p-4 shadow-[0_4px_0_0_rgba(0,0,0,0.05)] border-2 border-transparent active:scale-[0.98] transition-transform relative overflow-hidden";
 
-            return `<div class="flex flex-col gap-4 pb-20">` + produtos.map(p => {
+            return `<div class="flex flex-col gap-4 pb-24">` + produtos.map(p => {
                 const statusQtd = getStatusQtd(p.qtd, p.minimo);
                 let frescorHTML = '';
                 let ringClass = 'border-slate-100';
@@ -228,12 +256,10 @@
                     frescorHTML = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide ${themeFrescor.bg} ${themeFrescor.text} border border-white/50 shadow-sm ml-2">${themeFrescor.icon} ${themeFrescor.label}</span>`;
                 }
 
-                // Miniaturas: Até 12, sem botão de +
                 let visualQtd = '';
                 if (p.qtd === 0) {
                     visualQtd = `<span class="text-rose-300 font-black text-lg uppercase tracking-wider">VAZIO</span>`;
                 } else {
-                    // Limite rígido de 12 para exibição
                     const count = Math.min(p.qtd, 12);
                     for(let i=0; i < count; i++) {
                         visualQtd += `<div class="w-7 h-9 rounded-md overflow-hidden border border-slate-100 shadow-sm bg-white shrink-0 mb-1"><img src="${p.img}" class="w-full h-full object-cover"></div>`;
@@ -246,19 +272,13 @@
                         <div class="w-24 h-24 shrink-0 rounded-2xl bg-slate-50 overflow-hidden border-4 ${ringClass}">
                             <img src="${p.img}" class="w-full h-full object-cover ${imgFilter}">
                         </div>
-                        
                         <div class="flex-1 min-w-0 flex flex-col gap-2">
                             <div class="flex justify-between items-start">
                                 <h3 class="text-lg font-bold text-slate-700 leading-tight line-clamp-2">${p.nome} ${frescorHTML}</h3>
                             </div>
-
                             <div class="flex items-end justify-between">
-                                <div class="flex flex-wrap gap-1 pr-2 flex-1">
-                                    ${visualQtd}
-                                </div>
-                                <div class="shrink-0 text-5xl font-black ${p.qtd === 0 ? 'text-rose-200' : 'text-slate-200'} tabular-nums tracking-tighter leading-none self-end">
-                                    ${p.qtd}
-                                </div>
+                                <div class="flex flex-wrap gap-1 pr-2 flex-1">${visualQtd}</div>
+                                <div class="shrink-0 text-5xl font-black ${p.qtd === 0 ? 'text-rose-200' : 'text-slate-200'} tabular-nums tracking-tighter leading-none self-end">${p.qtd}</div>
                             </div>
                         </div>
                     </div>
@@ -266,33 +286,9 @@
             }).join('') + `</div>`;
         }
 
-        function renderGridEntrada() {
-            const ACTION_CARD_STYLE = "bg-white rounded-[2rem] p-3 shadow-[0_6px_0px_0px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[6px] transition-all border-2 border-transparent relative";
-            return `<div class="grid grid-cols-2 gap-4 pb-20">` + state.produtos.map(p => `
-                <div onclick="alterarQtd('${p.id}', 1)" class="${ACTION_CARD_STYLE} border-b-4 border-emerald-100 active:border-b-0">
-                    <div class="relative w-full aspect-square rounded-[1.5rem] overflow-hidden mb-2 bg-slate-50"><img src="${p.img}" class="w-full h-full object-cover opacity-90"><div class="absolute inset-0 flex items-center justify-center bg-emerald-500/20"><span class="text-4xl font-black text-white drop-shadow-md">+1</span></div></div>
-                    <p class="font-bold text-emerald-800 text-center leading-tight text-sm">${p.nome}</p>
-                    <div class="text-xs text-center text-emerald-600 font-bold mt-1">Tem ${p.qtd}</div>
-                </div>
-            `).join('') + `<div class="col-span-2 mt-4"><button onclick="vibrar('click'); setState({tela: 'estoque'})" class="w-full bg-slate-800 text-white py-6 rounded-[2rem] font-black text-xl shadow-[0_6px_0_0_rgba(0,0,0,0.3)] active:shadow-none active:translate-y-[6px] transition-all flex items-center justify-center gap-3"><span class="text-emerald-400">${ICONS.Check}</span> Terminei</button></div></div>`;
-        }
-
-        function renderGridSaida() {
-            const items = state.produtos.filter(p => p.qtd > 0);
-            if (items.length === 0) return `<div class="text-center p-10 text-slate-400 font-bold">Tudo vazio!<br>Nada para usar.</div>`;
-            const ACTION_CARD_STYLE = "bg-white rounded-[2rem] p-3 shadow-[0_6px_0px_0px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[6px] transition-all border-2 border-transparent relative";
-            return `<div class="grid grid-cols-2 gap-4 pb-20">` + items.map(p => `
-                <div onclick="alterarQtd('${p.id}', -1)" class="${ACTION_CARD_STYLE} border-b-4 border-orange-100 active:border-b-0">
-                    <div class="relative w-full aspect-square rounded-[1.5rem] overflow-hidden mb-2 bg-slate-50"><img src="${p.img}" class="w-full h-full object-cover opacity-90"><div class="absolute inset-0 flex items-center justify-center bg-orange-500/20"><span class="text-4xl font-black text-white drop-shadow-md">-1</span></div></div>
-                    <p class="font-bold text-orange-800 text-center leading-tight text-sm">${p.nome}</p>
-                    <div class="text-xs text-center text-orange-600 font-bold mt-1">Restam ${p.qtd}</div>
-                </div>
-            `).join('') + `<div class="col-span-2 mt-4"><button onclick="vibrar('click'); setState({tela: 'estoque'})" class="w-full bg-slate-800 text-white py-6 rounded-[2rem] font-black text-xl shadow-[0_6px_0_0_rgba(0,0,0,0.3)] active:shadow-none active:translate-y-[6px] transition-all flex items-center justify-center gap-3"><span class="text-orange-400">${ICONS.Check}</span> Pronto</button></div></div>`;
-        }
-
         function renderLista(lista) {
             if (lista.length === 0) return `<div class="text-center p-10 text-slate-400 font-bold flex flex-col items-center"><div class="text-emerald-400 mb-2">${ICONS.Check}</div>Tudo comprado!</div>`;
-            return `<div class="flex flex-col gap-3 pb-20">` + lista.map(p => `
+            return `<div class="flex flex-col gap-3 pb-24 animate-fade-in">` + lista.map(p => `
                 <div class="bg-white p-4 rounded-[2rem] shadow-sm border-l-8 border-rose-500 flex items-center gap-4">
                     <img src="${p.img}" class="w-16 h-16 rounded-xl bg-slate-100 object-cover">
                     <div class="flex-1"><h3 class="font-bold text-lg text-slate-800">${p.nome}</h3><p class="text-rose-500 text-xs font-bold uppercase">Falta Comprar</p></div>
@@ -302,21 +298,22 @@
         }
 
         function renderBottomNav() {
-            const activeClassArmario = "bg-white text-orange-600 shadow-[0_4px_12px_rgba(249,115,22,0.2)] scale-105";
-            const activeClassGeladeira = "bg-white text-cyan-600 shadow-[0_4px_12px_rgba(6,182,212,0.2)] scale-105";
-            const inactiveClass = "text-slate-400 hover:bg-white/50 opacity-60 grayscale";
-            const navBg = state.abaAtual === 'armario' ? 'bg-orange-100/90 border-orange-200/50' : 'bg-cyan-100/90 border-cyan-200/50';
+            // Abas Grandes como na referência
+            const activeClass = "bg-white text-slate-800 shadow-[0_4px_12px_rgba(0,0,0,0.1)] scale-105 ring-2 ring-slate-100";
+            const inactiveClass = "text-slate-400 hover:bg-white/50";
+            // Fundo fixo neutro para não brigar com o conteúdo
+            const navBg = "bg-slate-100/90 border-slate-200/50";
 
             return `
-            <div class="fixed bottom-0 left-0 right-0 ${navBg} backdrop-blur border-t pb-safe pt-2 px-4 z-20 rounded-t-[2rem] transition-colors duration-500">
+            <div class="fixed bottom-0 left-0 right-0 ${navBg} backdrop-blur border-t pb-safe pt-2 px-4 z-20 rounded-t-[2rem]">
                 <div class="flex h-24 items-center justify-center gap-6 pb-4">
-                    <button onclick="vibrar('click'); setState({abaAtual: 'armario'})" class="flex-1 h-16 rounded-[2rem] flex items-center justify-center gap-3 transition-all duration-300 ${state.abaAtual === 'armario' ? activeClassArmario : inactiveClass}">
+                    <button onclick="vibrar('click'); setState({abaAtual: 'armario'})" class="flex-1 h-16 rounded-[2rem] flex flex-col items-center justify-center gap-1 transition-all duration-300 ${state.abaAtual === 'armario' ? activeClass : inactiveClass}">
                         ${ICONS.Archive}
-                        <span class="text-sm font-black uppercase tracking-wide">Armário</span>
+                        <span class="text-[10px] font-black uppercase tracking-wide">Armário</span>
                     </button>
-                    <button onclick="vibrar('click'); setState({abaAtual: 'geladeira'})" class="flex-1 h-16 rounded-[2rem] flex items-center justify-center gap-3 transition-all duration-300 ${state.abaAtual === 'geladeira' ? activeClassGeladeira : inactiveClass}">
+                    <button onclick="vibrar('click'); setState({abaAtual: 'geladeira'})" class="flex-1 h-16 rounded-[2rem] flex flex-col items-center justify-center gap-1 transition-all duration-300 ${state.abaAtual === 'geladeira' ? activeClass : inactiveClass}">
                         ${ICONS.Snowflake}
-                        <span class="text-sm font-black uppercase tracking-wide">Geladeira</span>
+                        <span class="text-[10px] font-black uppercase tracking-wide">Geladeira</span>
                     </button>
                 </div>
             </div>`;
@@ -326,8 +323,8 @@
             const p = state.itemSelecionado;
             if (!p) return '';
             return `
-            <div class="fixed inset-0 z-50 flex flex-col justify-end">
-                <div onclick="setState({itemSelecionado: null})" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+            <div class="fixed inset-0 z-50 flex flex-col justify-end animate-fade-in">
+                <div onclick="setState({itemSelecionado: null})" class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"></div>
                 <div class="bg-white w-full rounded-t-[2.5rem] shadow-2xl z-10 overflow-hidden max-h-[85vh] flex flex-col pb-safe">
                     <div class="w-full flex justify-center pt-4 pb-2"><div class="w-16 h-1.5 bg-slate-200 rounded-full"></div></div>
                     <div class="p-6 pt-2">
