@@ -53,7 +53,6 @@
         const ICONS = {
             Archive: `<img src="https://cdn-icons-png.flaticon.com/512/6871/6871864.png" width="28" height="28" alt="Armário" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));">`,
             Snowflake: `<img src="https://cdn-icons-png.flaticon.com/512/2333/2333360.png" width="28" height="28" alt="Geladeira" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));">`,
-            
             PackageOpen: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9"/><path d="m7 9.5-1.5 1.5a2 2 0 0 0 0 2.8l.2.2"/><path d="m17 9.5 1.5 1.5a2 2 0 0 1 0 2.8l-.2.2"/><path d="M2 12h20"/><path d="m22 16-4-4"/><path d="m2 16 4-4"/></svg>`,
             ShoppingBag: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`,
             ArrowLeft: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>`,
@@ -110,7 +109,9 @@
             vibrar('sucesso');
             produto.qtd = novaQtd;
             if (delta > 0 && produto.tipo === 'geladeira') produto.dias_compra = 0;
-            if (state.itemSelecionado) state.itemSelecionado = null;
+            
+            // MUDANÇA: Não fecha mais o modal (itemSelecionado = null) para permitir repetição
+            
             state.historico = { produtos: estadoAnterior, timeout: setTimeout(() => { state.historico = null; render(); }, 4000) };
             save();
         }
@@ -224,7 +225,6 @@
         function renderListEstoque(produtos) {
             if (produtos.length === 0) return `<div class="text-center p-10 opacity-50 font-bold text-slate-400">Nada aqui ainda.</div>`;
             
-            // Estilo ajustado para permitir crescimento vertical (sem 'h-32' fixo)
             const CARD_STYLE = "bg-white rounded-[2rem] p-4 shadow-[0_6px_0_0_rgba(0,0,0,0.05)] border-2 border-transparent active:scale-[0.98] transition-transform relative overflow-hidden";
 
             return `<div class="flex flex-col gap-4 pb-20">` + produtos.map(p => {
@@ -245,16 +245,13 @@
                     frescorHTML = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide ${themeFrescor.bg} ${themeFrescor.text} border border-white/50 shadow-sm ml-2">${themeFrescor.icon} ${themeFrescor.label}</span>`;
                 }
 
-                // Miniaturas: Até 10, quebra de linha (flex-wrap)
+                // Miniaturas: MUDANÇA AQUI - Até 12 itens, com quebra de linha (flex-wrap)
                 let visualQtd = '';
                 if (p.qtd === 0) {
                     visualQtd = `<span class="text-rose-300 font-black text-lg uppercase tracking-wider">VAZIO</span>`;
                 } else {
-                    // Gera até 10 miniaturas
-                    // Se tiver mais que 10, mostra 9 e um "+"
-                    const maxShow = 10;
+                    const maxShow = 12;
                     const count = Math.min(p.qtd, maxShow);
-                    
                     for(let i=0; i < count; i++) {
                         visualQtd += `<div class="w-7 h-9 rounded-md overflow-hidden border border-slate-100 shadow-sm bg-white shrink-0 mb-1"><img src="${p.img}" class="w-full h-full object-cover"></div>`;
                     }
@@ -273,19 +270,15 @@
                         
                         <!-- Conteúdo -->
                         <div class="flex-1 min-w-0 flex flex-col gap-2">
-                            <!-- Nome e Status -->
                             <div class="flex justify-between items-start">
                                 <h3 class="text-lg font-bold text-slate-700 leading-tight line-clamp-2">${p.nome} ${frescorHTML}</h3>
                             </div>
 
-                            <!-- Container Flexível de Miniaturas e Número -->
+                            <!-- MUDANÇA: flex-wrap permite as miniaturas descerem linha -->
                             <div class="flex items-end justify-between">
-                                <!-- Grid de Miniaturas (Wrap permitido) -->
                                 <div class="flex flex-wrap gap-1 pr-2 flex-1">
                                     ${visualQtd}
                                 </div>
-                                
-                                <!-- Número Gigante (Sempre no final) -->
                                 <div class="shrink-0 text-5xl font-black ${p.qtd === 0 ? 'text-rose-200' : 'text-slate-200'} tabular-nums tracking-tighter leading-none self-end">
                                     ${p.qtd}
                                 </div>
@@ -296,7 +289,6 @@
             }).join('') + `</div>`;
         }
 
-        // ... (Resto mantido igual) ...
         function renderGridEntrada() {
             const ACTION_CARD_STYLE = "bg-white rounded-[2rem] p-3 shadow-[0_6px_0px_0px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[6px] transition-all border-2 border-transparent relative";
             return `<div class="grid grid-cols-2 gap-4 pb-20 animate-fade-in">` + state.produtos.map(p => `
@@ -354,7 +346,7 @@
         }
 
         function renderModal() {
-            const p = state.itemSelecionado;
+            const p = state.produtos.find(item => item.id === state.itemSelecionado.id);
             if (!p) return '';
             return `
             <div class="fixed inset-0 z-50 flex flex-col justify-end animate-fade-in">
