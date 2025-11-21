@@ -33,24 +33,24 @@
         
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
         .pt-safe { padding-top: env(safe-area-inset-top); }
+        
+        /* Filtro para itens esgotados */
+        .item-esgotado { filter: grayscale(100%) opacity(0.6); }
     </style>
 </head>
-<!-- A cor de fundo inicial muda dinamicamente via JS -->
 <body class="transition-colors duration-500 overflow-hidden fixed inset-0">
 
     <div id="app" class="h-full w-full flex flex-col"></div>
 
     <script>
-        // --- Service Worker ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./service-worker.js').catch(err => console.log('SW Falhou:', err));
             });
         }
 
-        // --- ÍCONES (Imagens Coloridas + SVGs) ---
+        // --- ÍCONES ---
         const ICONS = {
-            // Ícones coloridos mantidos, mas ajustados para 28px para alinhar com texto
             Archive: `<img src="https://cdn-icons-png.flaticon.com/512/6871/6871864.png" width="28" height="28" alt="Armário" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));">`,
             Snowflake: `<img src="https://cdn-icons-png.flaticon.com/512/2333/2333360.png" width="28" height="28" alt="Geladeira" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));">`,
             
@@ -75,13 +75,7 @@
             { id: '6', nome: 'Bananas', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Banana-Single.jpg/640px-Banana-Single.jpg', qtd: 6, minimo: 3, tipo: 'geladeira', dias_compra: 6, validade_dias: 5 }
         ];
 
-        let state = { 
-            produtos: [], 
-            abaAtual: 'armario', 
-            tela: 'estoque', 
-            itemSelecionado: null,
-            historico: null
-        };
+        let state = { produtos: [], abaAtual: 'armario', tela: 'estoque', itemSelecionado: null, historico: null };
 
         function init() {
             const saved = localStorage.getItem('estoque_mae_data');
@@ -145,9 +139,9 @@
         };
 
         const THEMES = {
-            seguro: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: 'CHEIO' },
-            alerta: { bg: 'bg-amber-100', text: 'text-amber-800', label: 'POUCO' },
-            critico: { bg: 'bg-rose-100', text: 'text-rose-800', label: 'ACABOU' },
+            seguro: { bg: 'bg-emerald-100', text: 'text-emerald-800' },
+            alerta: { bg: 'bg-amber-100', text: 'text-amber-800' },
+            critico: { bg: 'bg-rose-100', text: 'text-rose-800' },
             fresco: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'NOVO', icon: ICONS.Sparkles, ring: 'border-emerald-300' },
             vencendo: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'USAR', icon: ICONS.Clock, ring: 'border-orange-300' },
             estragado: { bg: 'bg-slate-200', text: 'text-slate-600', label: 'VELHO', icon: ICONS.Trash2, ring: 'border-slate-300' }
@@ -155,7 +149,7 @@
 
         function render() {
             const app = document.getElementById('app');
-            let bgColor = 'bg-orange-50'; // Default Armário
+            let bgColor = 'bg-orange-50';
             
             if (state.tela === 'entrada_rapida') bgColor = 'bg-emerald-100';
             else if (state.tela === 'saida_rapida') bgColor = 'bg-orange-100';
@@ -227,48 +221,73 @@
             </div>`;
         }
 
+        // ESTA É A FUNÇÃO ALTERADA PARA O LAYOUT PEDIDO
         function renderListEstoque(produtos) {
             if (produtos.length === 0) return `<div class="text-center p-10 opacity-50 font-bold text-slate-400">Nada aqui ainda.</div>`;
-            const CARD_STYLE = "bg-white rounded-[2rem] p-4 shadow-[0_6px_0_0_rgba(0,0,0,0.05)] border-2 border-transparent active:scale-[0.98] transition-transform relative overflow-hidden";
+            
+            // Cartão com overflow hidden para a imagem encostar na borda
+            const CARD_STYLE = "bg-white rounded-[2rem] shadow-[0_6px_0_0_rgba(0,0,0,0.05)] border-2 border-transparent active:scale-[0.98] transition-transform relative overflow-hidden flex h-32";
 
             return `<div class="flex flex-col gap-4 pb-20">` + produtos.map(p => {
                 const statusQtd = getStatusQtd(p.qtd, p.minimo);
-                const themeQtd = THEMES[statusQtd];
                 let frescorHTML = '';
-                let ringClass = 'border-slate-100';
-                let imgFilter = '';
+                let containerClass = p.qtd === 0 ? 'item-esgotado' : '';
+                let imgFilter = p.qtd === 0 ? 'grayscale' : '';
 
                 if (p.tipo === 'geladeira') {
                     const statusFrescor = getStatusFrescor(p.dias_compra, p.validade_dias);
                     const themeFrescor = THEMES[statusFrescor];
-                    ringClass = themeFrescor.ring;
-                    if (statusFrescor === 'estragado') imgFilter = 'grayscale contrast-125';
-                    frescorHTML = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${themeFrescor.bg} ${themeFrescor.text} border border-white/50 shadow-sm">${themeFrescor.icon} ${themeFrescor.label}</span>`;
+                    if (statusFrescor === 'estragado') {
+                        containerClass += ' grayscale contrast-125';
+                        imgFilter = 'grayscale';
+                    }
+                    frescorHTML = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide ${themeFrescor.bg} ${themeFrescor.text} border border-white/50 shadow-sm ml-2">${themeFrescor.icon} ${themeFrescor.label}</span>`;
                 }
 
+                // Miniaturas da imagem do produto
                 let visualQtd = '';
                 if (p.qtd === 0) {
-                    visualQtd = `<span class="text-rose-300 font-black text-xs uppercase">Vazio</span>`;
+                    visualQtd = `<span class="text-rose-300 font-black text-lg uppercase tracking-wider">VAZIO</span>`;
                 } else {
-                    for(let i=0; i < Math.min(p.qtd, 5); i++) visualQtd += `<div class="w-2 h-6 bg-slate-200 rounded-sm"></div>`;
-                    if(p.qtd > 5) visualQtd += `<span class="text-slate-300 font-bold text-xs">+</span>`;
+                    // Mostra até 4 miniaturas para caber no layout
+                    for(let i=0; i < Math.min(p.qtd, 4); i++) {
+                        visualQtd += `<div class="w-8 h-10 rounded overflow-hidden border border-slate-100 shadow-sm bg-white shrink-0"><img src="${p.img}" class="w-full h-full object-cover"></div>`;
+                    }
+                    if(p.qtd > 4) visualQtd += `<div class="w-8 h-10 rounded bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs border border-slate-200 shrink-0">+</div>`;
                 }
 
                 return `
                 <div onclick="vibrar('click'); openModal('${p.id}')" class="${CARD_STYLE}">
-                    <div class="flex items-center gap-4">
-                        <div class="w-20 h-20 shrink-0 rounded-2xl bg-slate-50 overflow-hidden border-4 ${ringClass}"><img src="${p.img}" class="w-full h-full object-cover ${imgFilter}"></div>
-                        <div class="flex-1 min-w-0 flex flex-col justify-center gap-1">
-                            <h3 class="text-lg font-bold text-slate-700 leading-tight truncate">${p.nome}</h3>
-                            <div class="flex flex-wrap gap-2 items-center"><span class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide ${themeQtd.bg} ${themeQtd.text}">${themeQtd.label}</span>${frescorHTML}</div>
-                            <div class="flex items-end gap-1 mt-1 h-6">${visualQtd}</div>
+                    <!-- Lado Esquerdo: Imagem Full Height (1:1 aspect approx based on h-32) -->
+                    <div class="w-32 h-full shrink-0 bg-slate-50 border-r border-slate-100 relative">
+                        <img src="${p.img}" class="w-full h-full object-cover ${imgFilter}">
+                        ${p.qtd === 0 ? '<div class="absolute inset-0 bg-white/50 flex items-center justify-center"><span class="text-rose-500 font-black text-xs bg-white px-2 py-1 rounded-full shadow-sm">ACABOU</span></div>' : ''}
+                    </div>
+                    
+                    <!-- Lado Direito: Conteúdo -->
+                    <div class="flex-1 min-w-0 flex flex-col justify-between p-3 pl-4 ${containerClass}">
+                        
+                        <!-- Topo: Nome -->
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-lg font-bold text-slate-700 leading-tight line-clamp-2">${p.nome} ${frescorHTML}</h3>
                         </div>
-                        <div class="shrink-0 text-5xl font-black ${p.qtd === 0 ? 'text-rose-200' : 'text-slate-200'} tabular-nums tracking-tighter">${p.qtd}</div>
+
+                        <!-- Base: Miniaturas + Número -->
+                        <div class="flex items-end justify-between mt-1">
+                            <div class="flex items-center gap-1 overflow-hidden pr-2">
+                                ${visualQtd}
+                            </div>
+                            <div class="shrink-0 text-5xl font-black ${p.qtd === 0 ? 'text-rose-200' : 'text-slate-200'} tabular-nums tracking-tighter leading-none">
+                                ${p.qtd}
+                            </div>
+                        </div>
                     </div>
                 </div>`;
             }).join('') + `</div>`;
         }
 
+        // ... (Resto das funções GridEntrada, GridSaida, Lista, etc. mantidas iguais) ...
+        
         function renderGridEntrada() {
             const ACTION_CARD_STYLE = "bg-white rounded-[2rem] p-3 shadow-[0_6px_0px_0px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[6px] transition-all border-2 border-transparent relative";
             return `<div class="grid grid-cols-2 gap-4 pb-20 animate-fade-in">` + state.produtos.map(p => `
@@ -305,27 +324,22 @@
         }
 
         function renderBottomNav() {
-            // Layout REVERTIDO para Horizontal (Flex Row) com ícone ao lado do texto
             const activeClassArmario = "bg-white text-orange-600 shadow-[0_4px_12px_rgba(249,115,22,0.2)] scale-105";
             const activeClassGeladeira = "bg-white text-cyan-600 shadow-[0_4px_12px_rgba(6,182,212,0.2)] scale-105";
             const inactiveClass = "text-slate-400 hover:bg-white/50 opacity-60 grayscale";
-
             const navBg = state.abaAtual === 'armario' ? 'bg-orange-100/90 border-orange-200/50' : 'bg-cyan-100/90 border-cyan-200/50';
 
             return `
             <div class="fixed bottom-0 left-0 right-0 ${navBg} backdrop-blur border-t pb-safe pt-2 px-4 z-20 rounded-t-[2rem] transition-colors duration-500">
                 <div class="flex h-24 items-center justify-center gap-6 pb-4">
-                    
                     <button onclick="vibrar('click'); setState({abaAtual: 'armario'})" class="flex-1 h-16 rounded-[2rem] flex items-center justify-center gap-3 transition-all duration-300 ${state.abaAtual === 'armario' ? activeClassArmario : inactiveClass}">
                         ${ICONS.Archive}
                         <span class="text-sm font-black uppercase tracking-wide">Armário</span>
                     </button>
-
                     <button onclick="vibrar('click'); setState({abaAtual: 'geladeira'})" class="flex-1 h-16 rounded-[2rem] flex items-center justify-center gap-3 transition-all duration-300 ${state.abaAtual === 'geladeira' ? activeClassGeladeira : inactiveClass}">
                         ${ICONS.Snowflake}
                         <span class="text-sm font-black uppercase tracking-wide">Geladeira</span>
                     </button>
-
                 </div>
             </div>`;
         }
