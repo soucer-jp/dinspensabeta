@@ -23,14 +23,8 @@
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
-        .animate-toast { animation: slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        @keyframes slideUpFade { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        
+        /* Animações removidas da interação principal para evitar "piscadas" */
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
         .pt-safe { padding-top: env(safe-area-inset-top); }
         
@@ -38,7 +32,7 @@
         .item-esgotado { filter: grayscale(100%) opacity(0.6); }
     </style>
 </head>
-<body class="transition-colors duration-500 overflow-hidden fixed inset-0">
+<body class="transition-colors duration-300 overflow-hidden fixed inset-0">
 
     <div id="app" class="h-full w-full flex flex-col"></div>
 
@@ -61,8 +55,7 @@
             X: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>`,
             Sparkles: `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 3-1.9 5.8a1 1 0 0 1-.6.6L3.7 11.3a1 1 0 0 0 0 1.9l5.8 1.9a1 1 0 0 1 .6.6l1.9 5.8a1 1 0 0 0 1.9 0l1.9-5.8a1 1 0 0 1 .6-.6l5.8-1.9a1 1 0 0 0 0-1.9l-5.8-1.9a1 1 0 0 1-.6-.6L13.9 3a1 1 0 0 0-1.9 0Z"/></svg>`,
             Clock: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
-            Trash2: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`,
-            Undo: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>`
+            Trash2: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`
         };
 
         const SEED_DATA = [
@@ -74,7 +67,7 @@
             { id: '6', nome: 'Bananas', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Banana-Single.jpg/640px-Banana-Single.jpg', qtd: 6, minimo: 3, tipo: 'geladeira', dias_compra: 6, validade_dias: 5 }
         ];
 
-        let state = { produtos: [], abaAtual: 'armario', tela: 'estoque', itemSelecionado: null, historico: null };
+        let state = { produtos: [], abaAtual: 'armario', tela: 'estoque', itemSelecionado: null };
 
         function init() {
             const saved = localStorage.getItem('estoque_mae_data');
@@ -102,28 +95,19 @@
         function alterarQtd(id, delta) {
             const index = state.produtos.findIndex(p => p.id === id);
             if (index === -1) return;
-            const estadoAnterior = JSON.parse(JSON.stringify(state.produtos));
+            
             const produto = state.produtos[index];
             const novaQtd = Math.max(0, produto.qtd + delta);
+            
             if (produto.qtd === 0 && delta < 0) { vibrar('erro'); return; }
             vibrar('sucesso');
+            
             produto.qtd = novaQtd;
             if (delta > 0 && produto.tipo === 'geladeira') produto.dias_compra = 0;
             
-            // MUDANÇA: Não fecha mais o modal (itemSelecionado = null) para permitir repetição
-            
-            state.historico = { produtos: estadoAnterior, timeout: setTimeout(() => { state.historico = null; render(); }, 4000) };
+            // NOTA: Não fechamos o modal nem mostramos aviso de desfazer.
+            // A atualização é direta e mantemos o estado atual da tela.
             save();
-        }
-
-        function desfazer() {
-            if (state.historico) {
-                vibrar('click');
-                clearTimeout(state.historico.timeout);
-                state.produtos = state.historico.produtos;
-                state.historico = null;
-                save();
-            }
         }
 
         const getStatusQtd = (qtd, minimo) => {
@@ -174,7 +158,6 @@
                 </main>
                 ${(state.tela === 'estoque' || state.tela === 'lista') ? renderBottomNav() : ''}
                 ${state.itemSelecionado ? renderModal() : ''}
-                ${state.historico ? renderToast() : ''}
             `;
         }
 
@@ -245,36 +228,30 @@
                     frescorHTML = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide ${themeFrescor.bg} ${themeFrescor.text} border border-white/50 shadow-sm ml-2">${themeFrescor.icon} ${themeFrescor.label}</span>`;
                 }
 
-                // Miniaturas: MUDANÇA AQUI - Até 12 itens, com quebra de linha (flex-wrap)
+                // Miniaturas: Até 12, sem botão de +
                 let visualQtd = '';
                 if (p.qtd === 0) {
                     visualQtd = `<span class="text-rose-300 font-black text-lg uppercase tracking-wider">VAZIO</span>`;
                 } else {
-                    const maxShow = 12;
-                    const count = Math.min(p.qtd, maxShow);
+                    // Limite rígido de 12 para exibição
+                    const count = Math.min(p.qtd, 12);
                     for(let i=0; i < count; i++) {
                         visualQtd += `<div class="w-7 h-9 rounded-md overflow-hidden border border-slate-100 shadow-sm bg-white shrink-0 mb-1"><img src="${p.img}" class="w-full h-full object-cover"></div>`;
-                    }
-                    if(p.qtd > maxShow) {
-                        visualQtd += `<div class="w-7 h-9 rounded-md bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs border border-slate-200 shrink-0 mb-1">+</div>`;
                     }
                 }
 
                 return `
                 <div onclick="vibrar('click'); openModal('${p.id}')" class="${CARD_STYLE}">
                     <div class="flex items-start gap-4 ${containerClass}">
-                        <!-- Imagem (Fixa no topo esquerdo) -->
                         <div class="w-24 h-24 shrink-0 rounded-2xl bg-slate-50 overflow-hidden border-4 ${ringClass}">
                             <img src="${p.img}" class="w-full h-full object-cover ${imgFilter}">
                         </div>
                         
-                        <!-- Conteúdo -->
                         <div class="flex-1 min-w-0 flex flex-col gap-2">
                             <div class="flex justify-between items-start">
                                 <h3 class="text-lg font-bold text-slate-700 leading-tight line-clamp-2">${p.nome} ${frescorHTML}</h3>
                             </div>
 
-                            <!-- MUDANÇA: flex-wrap permite as miniaturas descerem linha -->
                             <div class="flex items-end justify-between">
                                 <div class="flex flex-wrap gap-1 pr-2 flex-1">
                                     ${visualQtd}
@@ -291,7 +268,7 @@
 
         function renderGridEntrada() {
             const ACTION_CARD_STYLE = "bg-white rounded-[2rem] p-3 shadow-[0_6px_0px_0px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[6px] transition-all border-2 border-transparent relative";
-            return `<div class="grid grid-cols-2 gap-4 pb-20 animate-fade-in">` + state.produtos.map(p => `
+            return `<div class="grid grid-cols-2 gap-4 pb-20">` + state.produtos.map(p => `
                 <div onclick="alterarQtd('${p.id}', 1)" class="${ACTION_CARD_STYLE} border-b-4 border-emerald-100 active:border-b-0">
                     <div class="relative w-full aspect-square rounded-[1.5rem] overflow-hidden mb-2 bg-slate-50"><img src="${p.img}" class="w-full h-full object-cover opacity-90"><div class="absolute inset-0 flex items-center justify-center bg-emerald-500/20"><span class="text-4xl font-black text-white drop-shadow-md">+1</span></div></div>
                     <p class="font-bold text-emerald-800 text-center leading-tight text-sm">${p.nome}</p>
@@ -304,7 +281,7 @@
             const items = state.produtos.filter(p => p.qtd > 0);
             if (items.length === 0) return `<div class="text-center p-10 text-slate-400 font-bold">Tudo vazio!<br>Nada para usar.</div>`;
             const ACTION_CARD_STYLE = "bg-white rounded-[2rem] p-3 shadow-[0_6px_0px_0px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[6px] transition-all border-2 border-transparent relative";
-            return `<div class="grid grid-cols-2 gap-4 pb-20 animate-fade-in">` + items.map(p => `
+            return `<div class="grid grid-cols-2 gap-4 pb-20">` + items.map(p => `
                 <div onclick="alterarQtd('${p.id}', -1)" class="${ACTION_CARD_STYLE} border-b-4 border-orange-100 active:border-b-0">
                     <div class="relative w-full aspect-square rounded-[1.5rem] overflow-hidden mb-2 bg-slate-50"><img src="${p.img}" class="w-full h-full object-cover opacity-90"><div class="absolute inset-0 flex items-center justify-center bg-orange-500/20"><span class="text-4xl font-black text-white drop-shadow-md">-1</span></div></div>
                     <p class="font-bold text-orange-800 text-center leading-tight text-sm">${p.nome}</p>
@@ -315,7 +292,7 @@
 
         function renderLista(lista) {
             if (lista.length === 0) return `<div class="text-center p-10 text-slate-400 font-bold flex flex-col items-center"><div class="text-emerald-400 mb-2">${ICONS.Check}</div>Tudo comprado!</div>`;
-            return `<div class="flex flex-col gap-3 pb-20 animate-fade-in">` + lista.map(p => `
+            return `<div class="flex flex-col gap-3 pb-20">` + lista.map(p => `
                 <div class="bg-white p-4 rounded-[2rem] shadow-sm border-l-8 border-rose-500 flex items-center gap-4">
                     <img src="${p.img}" class="w-16 h-16 rounded-xl bg-slate-100 object-cover">
                     <div class="flex-1"><h3 class="font-bold text-lg text-slate-800">${p.nome}</h3><p class="text-rose-500 text-xs font-bold uppercase">Falta Comprar</p></div>
@@ -346,12 +323,12 @@
         }
 
         function renderModal() {
-            const p = state.produtos.find(item => item.id === state.itemSelecionado.id);
+            const p = state.itemSelecionado;
             if (!p) return '';
             return `
-            <div class="fixed inset-0 z-50 flex flex-col justify-end animate-fade-in">
-                <div onclick="setState({itemSelecionado: null})" class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"></div>
-                <div class="bg-white w-full rounded-t-[2.5rem] shadow-2xl z-10 overflow-hidden animate-slide-up max-h-[85vh] flex flex-col pb-safe">
+            <div class="fixed inset-0 z-50 flex flex-col justify-end">
+                <div onclick="setState({itemSelecionado: null})" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+                <div class="bg-white w-full rounded-t-[2.5rem] shadow-2xl z-10 overflow-hidden max-h-[85vh] flex flex-col pb-safe">
                     <div class="w-full flex justify-center pt-4 pb-2"><div class="w-16 h-1.5 bg-slate-200 rounded-full"></div></div>
                     <div class="p-6 pt-2">
                         <div class="flex flex-col items-center mb-8 text-center">
@@ -371,18 +348,6 @@
                         </div>
                         <button onclick="setState({itemSelecionado: null})" class="w-full mt-6 py-5 bg-slate-100 text-slate-400 font-bold rounded-[1.5rem] tracking-wide">FECHAR</button>
                     </div>
-                </div>
-            </div>`;
-        }
-
-        function renderToast() {
-            return `
-            <div class="fixed bottom-28 left-4 right-4 z-50 animate-toast pointer-events-none">
-                <div class="bg-slate-800/90 backdrop-blur text-white p-4 rounded-[1.5rem] shadow-2xl flex items-center justify-between pointer-events-auto">
-                    <span class="font-bold ml-2">Feito!</span>
-                    <button onclick="desfazer()" class="bg-white text-slate-900 px-4 py-2 rounded-xl font-black text-sm flex items-center gap-2 active:scale-95 transition-transform">
-                        ${ICONS.Undo} Desfazer
-                    </button>
                 </div>
             </div>`;
         }
