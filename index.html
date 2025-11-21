@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Controle de Estoque Mobile</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body { 
+            -webkit-tap-highlight-color: transparent; 
+            user-select: none; 
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        .pt-safe { padding-top: env(safe-area-inset-top); }
+    </style>
+</head>
+<body class="bg-emerald-50 transition-colors duration-500 overflow-hidden fixed inset-0">
+
+    <div id="app" class="h-full w-full flex flex-col"></div>
+
+    <script>
+        const ICONS = {
+            Archive: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>`,
+            Snowflake: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M12 2v20"/><path d="m20 16-4-4 4-4"/><path d="m4 8 4 4-4 4"/><path d="m16 4-4 4-4-4"/><path d="m8 20 4-4 4 4"/></svg>`,
+            PackageOpen: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9"/><path d="m7 9.5-1.5 1.5a2 2 0 0 0 0 2.8l.2.2"/><path d="m17 9.5 1.5 1.5a2 2 0 0 1 0 2.8l-.2.2"/><path d="M2 12h20"/><path d="m22 16-4-4"/><path d="m2 16 4-4"/></svg>`,
+            ShoppingBag: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`,
+            ArrowLeft: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>`,
+            ShoppingCart: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>`,
+            Check: `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`,
+            X: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>`,
+            Sparkles: `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 3-1.9 5.8a1 1 0 0 1-.6.6L3.7 11.3a1 1 0 0 0 0 1.9l5.8 1.9a1 1 0 0 1 .6.6l1.9 5.8a1 1 0 0 0 1.9 0l1.9-5.8a1 1 0 0 1 .6-.6l5.8-1.9a1 1 0 0 0 0-1.9l-5.8-1.9a1 1 0 0 1-.6-.6L13.9 3a1 1 0 0 0-1.9 0Z"/></svg>`,
+            Clock: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+            Trash2: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`
+        };
+
+        const SEED_DATA = [
+            { id: '1', nome: 'Arroz Branco 5kg', img: 'https://prezunic.vtexassets.com/arquivos/ids/180742/65678a821ef3739680761582.jpg?v=638368812869870000', qtd: 4, minimo: 2, tipo: 'armario', dias_compra: 10, validade_dias: 365 },
+            { id: '2', nome: 'Feijão Carioca 1kg', img: 'https://m.media-amazon.com/images/I/815s35jNVkL.jpg', qtd: 1, minimo: 3, tipo: 'armario', dias_compra: 5, validade_dias: 180 },
+            { id: '3', nome: 'Óleo de Soja', img: 'https://carrefourbrfood.vtexassets.com/arquivos/ids/211616/141836_1.jpg?v=637272514200130000', qtd: 0, minimo: 2, tipo: 'armario', dias_compra: 0, validade_dias: 365 },
+            { id: '4', nome: 'Sabonete', img: 'https://drogal.vtexassets.com/arquivos/ids/163251/11964.jpg?v=638464430221900000', qtd: 5, minimo: 2, tipo: 'armario', dias_compra: 30, validade_dias: 700 },
+            { id: '5', nome: 'Leite Integral', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Milk_glass.jpg/640px-Milk_glass.jpg', qtd: 2, minimo: 2, tipo: 'geladeira', dias_compra: 1, validade_dias: 5 },
+            { id: '6', nome: 'Bananas', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Banana-Single.jpg/640px-Banana-Single.jpg', qtd: 6, minimo: 3, tipo: 'geladeira', dias_compra: 6, validade_dias: 5 }
+        ];
+
+        let state = { produtos: [], abaAtual: 'armario', tela: 'estoque', itemSelecionado: null };
+
+        function init() {
+            const saved = localStorage.getItem('estoque_mae_data');
+            state.produtos = saved ? JSON.parse(saved) : SEED_DATA;
+            render();
+        }
+
+        function save() {
+            localStorage.setItem('estoque_mae_data', JSON.stringify(state.produtos));
+            render();
+        }
+
+        function setState(updates) {
+            state = { ...state, ...updates };
+            render();
+        }
+
+        function alterarQtd(id, delta) {
+            const index = state.produtos.findIndex(p => p.id === id);
+            if (index === -1) return;
+            const produto = state.produtos[index];
+            const novaQtd = Math.max(0, produto.qtd + delta);
+            produto.qtd = novaQtd;
+            if (delta > 0 && produto.tipo === 'geladeira') produto.dias_compra = 0;
+            if (state.itemSelecionado) state.itemSelecionado = null;
+            save();
+        }
+
+        const getStatusQtd = (qtd, minimo) => {
+            if (qtd === 0) return 'critico'; 
+            if (qtd <= minimo) return 'alerta'; 
+            return 'seguro';
+        };
+
+        const getStatusFrescor = (diasCompra, validade) => {
+            const diasRestantes = validade - diasCompra;
+            if (diasRestantes < 0) return 'estragado';
+            if (diasRestantes <= 2) return 'vencendo';
+            return 'fresco';
+        };
+
+        const THEMES = {
+            seguro: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: 'CHEIO' },
+            alerta: { bg: 'bg-amber-100', text: 'text-amber-800', label: 'POUCO' },
+            critico: { bg: 'bg-rose-100', text: 'text-rose-800', label: 'ACABOU' },
+            fresco: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'NOVO', icon: ICONS.Sparkles, ring: 'border-emerald-300' },
+            vencendo: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'USAR', icon: ICONS.Clock, ring: 'border-orange-300' },
+            estragado: { bg: 'bg-slate-200', text: 'text-slate-600', label: 'VELHO', icon: ICONS.Trash2, ring: 'border-slate-300' }
+        };
+
+        function render() {
+            const app = document.getElementById('app');
+            let bgColor = 'bg-emerald-50';
+            if (state.tela === 'entrada_rapida') bgColor = 'bg-emerald-100';
+            else if (state.tela === 'saida_rapida') bgColor = 'bg-orange-100';
+            
+            document.body.className = `${bgColor} transition-colors duration-300`;
+
+            const produtosExibidos = state.produtos.filter(p => p.tipo === state.abaAtual);
+            const listaDeCompras = state.produtos.filter(p => getStatusQtd(p.qtd, p.minimo) !== 'seguro');
+
+            app.innerHTML = `
+                ${renderHeader(listaDeCompras.length)}
+                <main class="flex-1 overflow-y-auto overflow-x-hidden pb-32 pt-safe no-scrollbar">
+                    <div class="p-4 pt-2">
+                        ${state.tela === 'estoque' ? renderListEstoque(produtosExibidos) : ''}
+                        ${state.tela === 'lista' ? renderLista(listaDeCompras) : ''}
+                        ${state.tela === 'entrada_rapida' ? renderGridEntrada() : ''}
+                        ${state.tela === 'saida_rapida' ? renderGridSaida() : ''}
+                    </div>
+                </main>
+                ${(state.tela === 'estoque' || state.tela === 'lista') ? renderBottomNav() : ''}
+                ${state.itemSelecionado ? renderModal() : ''}
+            `;
+        }
+
+        function renderHeader(qtdFalta) {
+            if (state.tela !== 'estoque' && state.tela !== 'lista') {
+                const config = state.tela === 'entrada_rapida' 
+                    ? { bg: 'bg-emerald-200', text: 'text-emerald-800', title: 'Guardar', sub: 'Toque no que chegou' }
+                    : { bg: 'bg-orange-200', text: 'text-orange-800', title: 'Vou Usar', sub: 'Toque no que pegou' };
+                return `
+                <div class="pt-safe ${config.bg} sticky top-0 z-10 shadow-sm">
+                    <div class="px-4 py-4 flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <button onclick="setState({tela: 'estoque'})" class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-[0_4px_0_0_rgba(0,0,0,0.1)] active:shadow-none active:translate-y-1 transition-all">${ICONS.ArrowLeft}</button>
+                            <div><h1 class="text-2xl font-black ${config.text} leading-none">${config.title}</h1><p class="text-sm opacity-70 font-bold">${config.sub}</p></div>
+                        </div>
+                    </div>
+                </div>`;
+            }
+            if (state.tela === 'lista') {
+                return `
+                <div class="pt-safe bg-white sticky top-0 z-10 shadow-sm">
+                    <div class="px-4 py-4 flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <button onclick="setState({tela: 'estoque'})" class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center shadow-sm active:scale-90 transition-transform">${ICONS.ArrowLeft}</button>
+                            <h1 class="text-2xl font-black text-rose-600 uppercase">Lista de Compras</h1>
+                        </div>
+                    </div>
+                </div>`;
+            }
+            
+            const titulo = state.abaAtual === 'armario' ? 'Armário' : 'Geladeira';
+            return `
+            <div class="pt-safe bg-white/90 backdrop-blur sticky top-0 z-10 shadow-sm transition-all">
+                <div class="px-5 py-4 flex justify-between items-end">
+                    <div><p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Estou olhando o</p><h1 class="text-4xl font-black text-slate-800 tracking-tight">${titulo}</h1></div>
+                    ${qtdFalta > 0 ? `<button onclick="setState({tela: 'lista'})" class="bg-rose-500 text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg animate-pulse flex items-center gap-2"><span class="bg-white text-rose-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-black">${qtdFalta}</span> Faltando</button>` : ''}
+                </div>
+            </div>`;
+        }
+
+        function renderListEstoque(produtos) {
+            if (produtos.length === 0) return `<div class="text-center p-10 opacity-50 font-bold text-slate-400">Nada aqui ainda.</div>`;
+
+            const CARD_STYLE = "bg-white rounded-[2rem] p-4 shadow-[0_6px_0_0_rgba(0,0,0,0.05)] border-2 border-transparent active:scale-[0.98] transition-transform relative overflow-hidden";
+
+            return `<div class="flex flex-col gap-4 pb-20">` + produtos.map(p => {
+                const statusQtd = getStatusQtd(p.qtd, p.minimo);
+                const themeQtd = THEMES[statusQtd];
+                let frescorHTML = '';
+                let ringClass = 'border-slate-100';
+                let imgFilter = '';
+
+                if (p.tipo === 'geladeira') {
+                    const statusFrescor = getStatusFrescor(p.dias_compra, p.validade_dias);
+                    const themeFrescor = THEMES[statusFrescor];
+                    ringClass = themeFrescor.ring;
+                    if (statusFrescor === 'estragado') imgFilter = 'grayscale contrast-125';
+                    frescorHTML = `
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${themeFrescor.bg} ${themeFrescor.text} border border-white/50 shadow-sm">
+                        ${themeFrescor.icon} ${themeFrescor.label}
+                    </span>`;
+                }
+
+                let visualQtd = '';
+                if (p.qtd === 0) {
+                    visualQtd = `<span class="text-rose-300 font-black text-xs uppercase">Vazio</span>`;
+                } else {
+                    for(let i=0; i < Math.min(p.qtd, 5); i++) {
+                        visualQtd += `<div class="w-2 h-6 bg-slate-200 rounded-sm"></div>`;
+                    }
+                    if(p.qtd > 5) visualQtd += `<span class="text-slate-300 font-bold text-xs">+</span>`;
+                }
+
+                return `
+                <div onclick="openModal('${p.id}')" class="${CARD_STYLE}">
+                    <div class="flex items-center gap-4">
+                        <div class="w-20 h-20 shrink-0 rounded-2xl bg-slate-50 overflow-hidden border-4 ${ringClass}">
+                            <img src="${p.img}" class="w-full h-full object-cover ${imgFilter}">
+                        </div>
+                        <div class="flex-1 min-w-0 flex flex-col justify-center gap-1">
+                            <h3 class="text-lg font-bold text-slate-700 leading-tight truncate">${p.nome}</h3>
+                            <div class="flex flex-wrap gap-2 items-center">
+                                <span class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide ${themeQtd.bg} ${themeQtd.text}">${themeQtd.label}</span>
+                                ${frescorHTML}
+                            </div>
+                            <div class="flex items-end gap-1 mt-1 h-6">${visualQtd}</div>
+                        </div>
+                        <div class="shrink-0 text-5xl font-black ${p.qtd === 0 ? 'text-rose-200' : 'text-slate-200'} tabular-nums tracking-tighter">${p.qtd}</div>
+                    </div>
+                </div>`;
+            }).join('') + `</div>`;
+        }
+
+        function renderGridEntrada() {
+            const ACTION_CARD_STYLE = "bg-white rounded-[2rem] p-3 shadow-[0_6px_0px_0px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[6px] transition-all border-2 border-transparent relative";
+            return `<div class="grid grid-cols-2 gap-4 pb-20 animate-fade-in">` + state.produtos.map(p => `
+                <div onclick="alterarQtd('${p.id}', 1)" class="${ACTION_CARD_STYLE} border-b-4 border-emerald-100 active:border-b-0">
+                    <div class="relative w-full aspect-square rounded-[1.5rem] overflow-hidden mb-2 bg-slate-50">
+                        <img src="${p.img}" class="w-full h-full object-cover opacity-90">
+                        <div class="absolute inset-0 flex items-center justify-center bg-emerald-500/20"><span class="text-4xl font-black text-white drop-shadow-md">+1</span></div>
+                    </div>
+                    <p class="font-bold text-emerald-800 text-center leading-tight text-sm">${p.nome}</p>
+                    <div class="text-xs text-center text-emerald-600 font-bold mt-1">Tem ${p.qtd}</div>
+                </div>
+            `).join('') + `<div class="col-span-2 mt-4"><button onclick="setState({tela: 'estoque'})" class="w-full bg-slate-800 text-white py-6 rounded-[2rem] font-black text-xl shadow-[0_6px_0_0_rgba(0,0,0,0.3)] active:shadow-none active:translate-y-[6px] transition-all flex items-center justify-center gap-3"><span class="text-emerald-400">${ICONS.Check}</span> Terminei</button></div></div>`;
+        }
+
+        function renderGridSaida() {
+            const items = state.produtos.filter(p => p.qtd > 0);
+            if (items.length === 0) return `<div class="text-center p-10 text-slate-400 font-bold">Tudo vazio!<br>Nada para usar.</div>`;
+            const ACTION_CARD_STYLE = "bg-white rounded-[2rem] p-3 shadow-[0_6px_0px_0px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[6px] transition-all border-2 border-transparent relative";
+            return `<div class="grid grid-cols-2 gap-4 pb-20 animate-fade-in">` + items.map(p => `
+                <div onclick="alterarQtd('${p.id}', -1)" class="${ACTION_CARD_STYLE} border-b-4 border-orange-100 active:border-b-0">
+                    <div class="relative w-full aspect-square rounded-[1.5rem] overflow-hidden mb-2 bg-slate-50">
+                        <img src="${p.img}" class="w-full h-full object-cover opacity-90">
+                        <div class="absolute inset-0 flex items-center justify-center bg-orange-500/20"><span class="text-4xl font-black text-white drop-shadow-md">-1</span></div>
+                    </div>
+                    <p class="font-bold text-orange-800 text-center leading-tight text-sm">${p.nome}</p>
+                    <div class="text-xs text-center text-orange-600 font-bold mt-1">Restam ${p.qtd}</div>
+                </div>
+            `).join('') + `<div class="col-span-2 mt-4"><button onclick="setState({tela: 'estoque'})" class="w-full bg-slate-800 text-white py-6 rounded-[2rem] font-black text-xl shadow-[0_6px_0_0_rgba(0,0,0,0.3)] active:shadow-none active:translate-y-[6px] transition-all flex items-center justify-center gap-3"><span class="text-orange-400">${ICONS.Check}</span> Pronto</button></div></div>`;
+        }
+
+        function renderLista(lista) {
+            if (lista.length === 0) return `<div class="text-center p-10 text-slate-400 font-bold flex flex-col items-center"><div class="text-emerald-400 mb-2">${ICONS.Check}</div>Tudo comprado!</div>`;
+            return `<div class="flex flex-col gap-3 pb-20 animate-fade-in">` + lista.map(p => `
+                <div class="bg-white p-4 rounded-[2rem] shadow-sm border-l-8 border-rose-500 flex items-center gap-4">
+                    <img src="${p.img}" class="w-16 h-16 rounded-xl bg-slate-100 object-cover">
+                    <div class="flex-1">
+                        <h3 class="font-bold text-lg text-slate-800">${p.nome}</h3>
+                        <p class="text-rose-500 text-xs font-bold uppercase">Falta Comprar</p>
+                    </div>
+                    <button onclick="alterarQtd('${p.id}', 3)" class="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center active:scale-90 transition-transform shadow-sm">${ICONS.Check}</button>
+                </div>
+            `).join('') + `</div>`;
+        }
+
+        // Bottom Nav com apenas Abas
+        function renderBottomNav() {
+            const activeClass = "bg-white text-emerald-600 shadow-[0_4px_12px_rgba(16,185,129,0.15)] scale-105";
+            const inactiveClass = "text-slate-400 hover:bg-white/50";
+
+            return `
+            <div class="fixed bottom-0 left-0 right-0 bg-cyan-50/90 backdrop-blur border-t border-slate-200/50 pb-safe pt-2 px-4 z-20 rounded-t-[2rem]">
+                <div class="flex h-20 items-center justify-center gap-4 pb-2">
+                    
+                    <button onclick="setState({abaAtual: 'armario'})" class="flex-1 h-14 rounded-[1.5rem] flex items-center justify-center gap-2 transition-all duration-300 ${state.abaAtual === 'armario' ? activeClass : inactiveClass}">
+                        <div class="w-6 h-6">${ICONS.Archive}</div>
+                        <span class="text-sm font-black uppercase tracking-wide">Armário</span>
+                    </button>
+
+                    <button onclick="setState({abaAtual: 'geladeira'})" class="flex-1 h-14 rounded-[1.5rem] flex items-center justify-center gap-2 transition-all duration-300 ${state.abaAtual === 'geladeira' ? activeClass : inactiveClass}">
+                        <div class="w-6 h-6">${ICONS.Snowflake}</div>
+                        <span class="text-sm font-black uppercase tracking-wide">Geladeira</span>
+                    </button>
+
+                </div>
+            </div>`;
+        }
+
+        function renderModal() {
+            const p = state.itemSelecionado;
+            if (!p) return '';
+            return `
+            <div class="fixed inset-0 z-50 flex flex-col justify-end animate-fade-in">
+                <div onclick="setState({itemSelecionado: null})" class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"></div>
+                <div class="bg-white w-full rounded-t-[2.5rem] shadow-2xl z-10 overflow-hidden animate-slide-up max-h-[85vh] flex flex-col pb-safe">
+                    <div class="w-full flex justify-center pt-4 pb-2"><div class="w-16 h-1.5 bg-slate-200 rounded-full"></div></div>
+                    <div class="p-6 pt-2">
+                        <div class="flex flex-col items-center mb-8 text-center">
+                            <div class="w-48 h-48 rounded-[2rem] bg-slate-50 mb-4 overflow-hidden shadow-inner border-4 border-slate-100"><img src="${p.img}" class="w-full h-full object-cover"></div>
+                            <h2 class="text-3xl font-black text-slate-800 leading-tight mb-1">${p.nome}</h2>
+                            <div class="text-slate-400 font-bold text-lg uppercase tracking-wide">Você tem <strong class="text-4xl text-slate-800 ml-1">${p.qtd}</strong></div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button onclick="alterarQtd('${p.id}', -1)" ${p.qtd===0?'disabled':''} class="h-36 flex flex-col items-center justify-center gap-3 bg-orange-50 border-2 border-orange-100 rounded-[2rem] active:scale-95 transition-all disabled:opacity-50 disabled:grayscale">
+                                <div class="w-14 h-14 bg-white rounded-full text-orange-500 flex items-center justify-center shadow-sm text-2xl font-bold">-</div>
+                                <span class="font-black text-orange-800">ABRI 1</span>
+                            </button>
+                            <button onclick="alterarQtd('${p.id}', 1)" class="h-36 flex flex-col items-center justify-center gap-3 bg-emerald-50 border-2 border-emerald-100 rounded-[2rem] active:scale-95 transition-all">
+                                <div class="w-14 h-14 bg-white rounded-full text-emerald-500 flex items-center justify-center shadow-sm text-2xl font-bold">+</div>
+                                <span class="font-black text-emerald-800">COMPREI</span>
+                            </button>
+                        </div>
+                        <button onclick="setState({itemSelecionado: null})" class="w-full mt-6 py-5 bg-slate-100 text-slate-400 font-bold rounded-[1.5rem] tracking-wide">FECHAR</button>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function openModal(id) {
+            const item = state.produtos.find(p => p.id === id);
+            setState({ itemSelecionado: item });
+        }
+
+        init();
+    </script>
+</body>
+</html>
