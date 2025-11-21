@@ -221,22 +221,23 @@
             </div>`;
         }
 
-        // ESTA É A FUNÇÃO ALTERADA PARA O LAYOUT PEDIDO
         function renderListEstoque(produtos) {
             if (produtos.length === 0) return `<div class="text-center p-10 opacity-50 font-bold text-slate-400">Nada aqui ainda.</div>`;
             
-            // Cartão com overflow hidden para a imagem encostar na borda
-            const CARD_STYLE = "bg-white rounded-[2rem] shadow-[0_6px_0_0_rgba(0,0,0,0.05)] border-2 border-transparent active:scale-[0.98] transition-transform relative overflow-hidden flex h-32";
+            // VOLTA PARA O ESTILO BOXED (COM MOLDURA/PADDING)
+            const CARD_STYLE = "bg-white rounded-[2rem] p-4 shadow-[0_6px_0_0_rgba(0,0,0,0.05)] border-2 border-transparent active:scale-[0.98] transition-transform relative overflow-hidden";
 
             return `<div class="flex flex-col gap-4 pb-20">` + produtos.map(p => {
                 const statusQtd = getStatusQtd(p.qtd, p.minimo);
                 let frescorHTML = '';
+                let ringClass = 'border-slate-100';
                 let containerClass = p.qtd === 0 ? 'item-esgotado' : '';
                 let imgFilter = p.qtd === 0 ? 'grayscale' : '';
 
                 if (p.tipo === 'geladeira') {
                     const statusFrescor = getStatusFrescor(p.dias_compra, p.validade_dias);
                     const themeFrescor = THEMES[statusFrescor];
+                    ringClass = themeFrescor.ring;
                     if (statusFrescor === 'estragado') {
                         containerClass += ' grayscale contrast-125';
                         imgFilter = 'grayscale';
@@ -244,12 +245,11 @@
                     frescorHTML = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide ${themeFrescor.bg} ${themeFrescor.text} border border-white/50 shadow-sm ml-2">${themeFrescor.icon} ${themeFrescor.label}</span>`;
                 }
 
-                // Miniaturas da imagem do produto
                 let visualQtd = '';
                 if (p.qtd === 0) {
                     visualQtd = `<span class="text-rose-300 font-black text-lg uppercase tracking-wider">VAZIO</span>`;
                 } else {
-                    // Mostra até 4 miniaturas para caber no layout
+                    // Miniaturas
                     for(let i=0; i < Math.min(p.qtd, 4); i++) {
                         visualQtd += `<div class="w-8 h-10 rounded overflow-hidden border border-slate-100 shadow-sm bg-white shrink-0"><img src="${p.img}" class="w-full h-full object-cover"></div>`;
                     }
@@ -258,27 +258,25 @@
 
                 return `
                 <div onclick="vibrar('click'); openModal('${p.id}')" class="${CARD_STYLE}">
-                    <!-- Lado Esquerdo: Imagem Full Height (1:1 aspect approx based on h-32) -->
-                    <div class="w-32 h-full shrink-0 bg-slate-50 border-r border-slate-100 relative">
-                        <img src="${p.img}" class="w-full h-full object-cover ${imgFilter}">
-                        ${p.qtd === 0 ? '<div class="absolute inset-0 bg-white/50 flex items-center justify-center"><span class="text-rose-500 font-black text-xs bg-white px-2 py-1 rounded-full shadow-sm">ACABOU</span></div>' : ''}
-                    </div>
-                    
-                    <!-- Lado Direito: Conteúdo -->
-                    <div class="flex-1 min-w-0 flex flex-col justify-between p-3 pl-4 ${containerClass}">
-                        
-                        <!-- Topo: Nome -->
-                        <div class="flex justify-between items-start">
-                            <h3 class="text-lg font-bold text-slate-700 leading-tight line-clamp-2">${p.nome} ${frescorHTML}</h3>
+                    <div class="flex items-center gap-4 ${containerClass}">
+                        <!-- Imagem Contida (BOXED) -->
+                        <div class="w-24 h-24 shrink-0 rounded-2xl bg-slate-50 overflow-hidden border-4 ${ringClass}">
+                            <img src="${p.img}" class="w-full h-full object-cover ${imgFilter}">
                         </div>
-
-                        <!-- Base: Miniaturas + Número -->
-                        <div class="flex items-end justify-between mt-1">
-                            <div class="flex items-center gap-1 overflow-hidden pr-2">
-                                ${visualQtd}
+                        
+                        <!-- Conteúdo -->
+                        <div class="flex-1 min-w-0 flex flex-col justify-center gap-2">
+                            <div class="flex justify-between items-start">
+                                <h3 class="text-lg font-bold text-slate-700 leading-tight line-clamp-2">${p.nome} ${frescorHTML}</h3>
                             </div>
-                            <div class="shrink-0 text-5xl font-black ${p.qtd === 0 ? 'text-rose-200' : 'text-slate-200'} tabular-nums tracking-tighter leading-none">
-                                ${p.qtd}
+
+                            <div class="flex items-end justify-between">
+                                <div class="flex items-center gap-1 overflow-hidden pr-2">
+                                    ${visualQtd}
+                                </div>
+                                <div class="shrink-0 text-5xl font-black ${p.qtd === 0 ? 'text-rose-200' : 'text-slate-200'} tabular-nums tracking-tighter leading-none">
+                                    ${p.qtd}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -286,8 +284,6 @@
             }).join('') + `</div>`;
         }
 
-        // ... (Resto das funções GridEntrada, GridSaida, Lista, etc. mantidas iguais) ...
-        
         function renderGridEntrada() {
             const ACTION_CARD_STYLE = "bg-white rounded-[2rem] p-3 shadow-[0_6px_0px_0px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[6px] transition-all border-2 border-transparent relative";
             return `<div class="grid grid-cols-2 gap-4 pb-20 animate-fade-in">` + state.produtos.map(p => `
