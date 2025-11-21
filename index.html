@@ -224,7 +224,7 @@
         function renderListEstoque(produtos) {
             if (produtos.length === 0) return `<div class="text-center p-10 opacity-50 font-bold text-slate-400">Nada aqui ainda.</div>`;
             
-            // VOLTA PARA O ESTILO BOXED (COM MOLDURA/PADDING)
+            // Estilo ajustado para permitir crescimento vertical (sem 'h-32' fixo)
             const CARD_STYLE = "bg-white rounded-[2rem] p-4 shadow-[0_6px_0_0_rgba(0,0,0,0.05)] border-2 border-transparent active:scale-[0.98] transition-transform relative overflow-hidden";
 
             return `<div class="flex flex-col gap-4 pb-20">` + produtos.map(p => {
@@ -245,36 +245,48 @@
                     frescorHTML = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide ${themeFrescor.bg} ${themeFrescor.text} border border-white/50 shadow-sm ml-2">${themeFrescor.icon} ${themeFrescor.label}</span>`;
                 }
 
+                // Miniaturas: Até 10, quebra de linha (flex-wrap)
                 let visualQtd = '';
                 if (p.qtd === 0) {
                     visualQtd = `<span class="text-rose-300 font-black text-lg uppercase tracking-wider">VAZIO</span>`;
                 } else {
-                    // Miniaturas
-                    for(let i=0; i < Math.min(p.qtd, 4); i++) {
-                        visualQtd += `<div class="w-8 h-10 rounded overflow-hidden border border-slate-100 shadow-sm bg-white shrink-0"><img src="${p.img}" class="w-full h-full object-cover"></div>`;
+                    // Gera até 10 miniaturas
+                    // Se tiver mais que 10, mostra 9 e um "+"
+                    const maxShow = 10;
+                    const count = Math.min(p.qtd, maxShow);
+                    
+                    for(let i=0; i < count; i++) {
+                        visualQtd += `<div class="w-7 h-9 rounded-md overflow-hidden border border-slate-100 shadow-sm bg-white shrink-0 mb-1"><img src="${p.img}" class="w-full h-full object-cover"></div>`;
                     }
-                    if(p.qtd > 4) visualQtd += `<div class="w-8 h-10 rounded bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs border border-slate-200 shrink-0">+</div>`;
+                    if(p.qtd > maxShow) {
+                        visualQtd += `<div class="w-7 h-9 rounded-md bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs border border-slate-200 shrink-0 mb-1">+</div>`;
+                    }
                 }
 
                 return `
                 <div onclick="vibrar('click'); openModal('${p.id}')" class="${CARD_STYLE}">
-                    <div class="flex items-center gap-4 ${containerClass}">
-                        <!-- Imagem Contida (BOXED) -->
+                    <div class="flex items-start gap-4 ${containerClass}">
+                        <!-- Imagem (Fixa no topo esquerdo) -->
                         <div class="w-24 h-24 shrink-0 rounded-2xl bg-slate-50 overflow-hidden border-4 ${ringClass}">
                             <img src="${p.img}" class="w-full h-full object-cover ${imgFilter}">
                         </div>
                         
                         <!-- Conteúdo -->
-                        <div class="flex-1 min-w-0 flex flex-col justify-center gap-2">
+                        <div class="flex-1 min-w-0 flex flex-col gap-2">
+                            <!-- Nome e Status -->
                             <div class="flex justify-between items-start">
                                 <h3 class="text-lg font-bold text-slate-700 leading-tight line-clamp-2">${p.nome} ${frescorHTML}</h3>
                             </div>
 
+                            <!-- Container Flexível de Miniaturas e Número -->
                             <div class="flex items-end justify-between">
-                                <div class="flex items-center gap-1 overflow-hidden pr-2">
+                                <!-- Grid de Miniaturas (Wrap permitido) -->
+                                <div class="flex flex-wrap gap-1 pr-2 flex-1">
                                     ${visualQtd}
                                 </div>
-                                <div class="shrink-0 text-5xl font-black ${p.qtd === 0 ? 'text-rose-200' : 'text-slate-200'} tabular-nums tracking-tighter leading-none">
+                                
+                                <!-- Número Gigante (Sempre no final) -->
+                                <div class="shrink-0 text-5xl font-black ${p.qtd === 0 ? 'text-rose-200' : 'text-slate-200'} tabular-nums tracking-tighter leading-none self-end">
                                     ${p.qtd}
                                 </div>
                             </div>
@@ -284,6 +296,7 @@
             }).join('') + `</div>`;
         }
 
+        // ... (Resto mantido igual) ...
         function renderGridEntrada() {
             const ACTION_CARD_STYLE = "bg-white rounded-[2rem] p-3 shadow-[0_6px_0px_0px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[6px] transition-all border-2 border-transparent relative";
             return `<div class="grid grid-cols-2 gap-4 pb-20 animate-fade-in">` + state.produtos.map(p => `
